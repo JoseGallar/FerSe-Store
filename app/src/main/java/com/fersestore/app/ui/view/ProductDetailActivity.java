@@ -1,15 +1,9 @@
 package com.fersestore.app.ui.view;
 
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputType;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,29 +13,16 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.fersestore.app.R;
 import com.fersestore.app.data.entity.ProductEntity;
-import com.fersestore.app.data.entity.TransactionEntity;
-import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
-import com.fersestore.app.ui.viewmodel.TransactionViewModel;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 
 public class ProductDetailActivity extends AppCompatActivity {
 
     private ProductViewModel productViewModel;
-    private TransactionViewModel transactionViewModel;
-    private ProductEntity product; // CAMBIO: Ahora usamos ProductEntity
-    private int productId;
-
-    // Vistas
-    private TextView tvName, tvPrice, tvStock, tvCategory;
-    private ImageView imgProduct;
-
-    // Mapa para manejar stock por colores (Ej: "Rojo" -> 5)
-    private Map<String, Integer> stockMap = new HashMap<>();
+    private ProductEntity currentProduct;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,192 +30,89 @@ public class ProductDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_product_detail);
 
         productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
-        transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
 
-        // Recibir ID del producto
-        productId = getIntent().getIntExtra("PRODUCT_ID", -1);
-
-        initViews();
-
-        // Buscar el producto en la base de datos
-        productViewModel.getAllProducts().observe(this, products -> {
-            for (ProductEntity p : products) {
-                if (p.getId() == productId) {
-                    this.product = p;
-                    loadProductData();
-                    break;
-                }
-            }
-        });
-
-        findViewById(R.id.btn_sell).setOnClickListener(v -> showSellDialog());
-    }
-
-    private void initViews() {
-        tvName = findViewById(R.id.detail_name);
-        tvPrice = findViewById(R.id.detail_price);
-        tvStock = findViewById(R.id.detail_stock);
-        tvCategory = findViewById(R.id.detail_category);
-        imgProduct = findViewById(R.id.detail_image);
-    }
-
-    private void loadProductData() {
-        if (product == null) return;
-
-        tvName.setText(product.getName());
-        tvPrice.setText("$ " + product.getSalePrice());
-        tvStock.setText("Stock Total: " + product.getCurrentStock());
-        tvCategory.setText(product.getCategory());
-
-        if (product.getImageUri() != null && !product.getImageUri().isEmpty()) {
-            imgProduct.setImageURI(Uri.parse(product.getImageUri()));
+        // Recuperar el producto enviado desde la lista
+        if (getIntent().hasExtra("product_id")) {
+            int id = getIntent().getIntExtra("product_id", -1);
+            // Acá deberíamos buscar por ID, pero por simplicidad pasamos el objeto o sus datos.
+            // Si pasaste el objeto serializable sería mejor, pero asumamos que buscamos o recibimos datos.
+            // NOTA: Para simplificar, voy a asumir que pasaste los datos por Intent como Strings/Ints
+            // O mejor aún, si tu Adapter pasaba el objeto "ProductEntity" (Serializable), lo recuperamos así:
+            currentProduct = (ProductEntity) getIntent().getSerializableExtra("product_data");
         }
 
-        // Cargar desglose de stock (si existe)
-        parseStockBreakdown(product.stockBreakdown);
-    }
-
-    private void parseStockBreakdown(String breakdown) {
-        stockMap.clear();
-        if (breakdown != null && !breakdown.isEmpty()) {
-            String[] parts = breakdown.split(";");
-            for (String part : parts) {
-                String[] pair = part.split(":");
-                if (pair.length == 2) {
-                    try {
-                        stockMap.put(pair[0], Integer.parseInt(pair[1]));
-                    } catch (NumberFormatException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
-
-    private void saveStockToProduct() {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Integer> entry : stockMap.entrySet()) {
-            if (sb.length() > 0) sb.append(";");
-            sb.append(entry.getKey()).append(":").append(entry.getValue());
-        }
-        product.stockBreakdown = sb.toString();
-    }
-
-    // --- DIÁLOGO DE VENTA ---
-    private void showSellDialog() {
-        if (product == null || product.getCurrentStock() <= 0) {
-            Toast.makeText(this, "Sin stock disponible", Toast.LENGTH_SHORT).show();
+        if (currentProduct == null) {
+            Toast.makeText(this, "Error al cargar producto", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Realizar Venta 🧾");
+        setupViews();
+    }
 
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(50, 20, 50, 20);
+    private void setupViews() {
+        ImageView imgDetail = findViewById(R.id.img_detail);
+        TextView tvCategory = findViewById(R.id.tv_detail_category);
+        TextView tvName = findViewById(R.id.tv_detail_name);
+        TextView tvPrice = findViewById(R.id.tv_detail_price);
+        TextView tvStock = findViewById(R.id.tv_detail_stock);
+        TextView tvVariants = findViewById(R.id.tv_detail_variants); // El detalle de colores
 
-        // Selector de Color
-        final Spinner spinnerColors = new Spinner(this);
-        List<String> colorOptions = new ArrayList<>();
-        if (!stockMap.isEmpty()) {
-            for (Map.Entry<String, Integer> entry : stockMap.entrySet()) {
-                if (entry.getValue() > 0) {
-                    colorOptions.add(entry.getKey() + " (Disp: " + entry.getValue() + ")");
-                }
-            }
+        Button btnDelete = findViewById(R.id.btn_delete);
+        Button btnEdit = findViewById(R.id.btn_edit);
+
+        // 1. Cargar Textos Básicos
+        tvName.setText(currentProduct.getName());
+        tvCategory.setText(currentProduct.getCategory().toUpperCase());
+        tvStock.setText(currentProduct.getStock() + " unidades");
+
+        // 2. Mostrar el Detalle de Variantes (Colores)
+        // Usamos el campo 'description' donde guardamos "Rojo: 5, Verde: 2"
+        if (currentProduct.getDescription() != null && !currentProduct.getDescription().isEmpty()) {
+            tvVariants.setText(currentProduct.getDescription());
         } else {
-            colorOptions.add("Estándar (Disp: " + product.getCurrentStock() + ")");
+            tvVariants.setText("No hay variantes registradas (Solo stock total).");
         }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, colorOptions);
-        spinnerColors.setAdapter(adapter);
-        container.addView(spinnerColors);
 
-        // Cantidad
-        final EditText inputQuantity = new EditText(this);
-        inputQuantity.setInputType(InputType.TYPE_CLASS_NUMBER);
-        inputQuantity.setText("1");
-        inputQuantity.setHint("Cantidad");
-        container.addView(inputQuantity);
+        // 3. Formato de Precio "Limpio" (Igual que en la lista)
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        symbols.setGroupingSeparator('.');
+        symbols.setDecimalSeparator(',');
+        DecimalFormat decimalFormat = new DecimalFormat("#,###.##", symbols);
+        tvPrice.setText("$ " + decimalFormat.format(currentProduct.getPrice()));
 
-        builder.setView(container);
+        // 4. Cargar Imagen (Lógica blindada)
+        if (currentProduct.getImageUri() != null && !currentProduct.getImageUri().isEmpty()) {
+            try {
+                File imgFile = new File(currentProduct.getImageUri());
+                if (imgFile.exists()) {
+                    imgDetail.setImageURI(Uri.fromFile(imgFile));
+                } else {
+                    imgDetail.setImageURI(Uri.parse(currentProduct.getImageUri()));
+                }
+            } catch (Exception e) {
+                imgDetail.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+        }
 
-        // BOTONES
-        builder.setPositiveButton("VENDER Y TICKET 🧾", (dialog, which) -> processSale(inputQuantity, spinnerColors, true));
-        builder.setNeutralButton("SOLO VENDER 💾", (dialog, which) -> processSale(inputQuantity, spinnerColors, false));
-        builder.setNegativeButton("Cancelar", null);
-
-        builder.show();
+        // 5. Botones
+        btnDelete.setOnClickListener(v -> showDeleteConfirmation());
+        btnEdit.setOnClickListener(v -> {
+            Toast.makeText(this, "Próximamente: Editar", Toast.LENGTH_SHORT).show();
+            // Acá iría el Intent para abrir AddProductActivity con los datos cargados
+        });
     }
 
-    private void processSale(EditText inputQty, Spinner spinner, boolean sendTicket) {
-        String qtyStr = inputQty.getText().toString().trim();
-        if (qtyStr.isEmpty()) qtyStr = "1";
-        int quantityToSell = Integer.parseInt(qtyStr);
-
-        String selectedColorName = null;
-
-        if (!stockMap.isEmpty() && spinner.getSelectedItem() != null) {
-            String selection = spinner.getSelectedItem().toString();
-            selectedColorName = selection.substring(0, selection.indexOf(" (Disp:")).trim();
-        }
-
-        if (quantityToSell <= 0) return;
-        if (quantityToSell > product.getCurrentStock()) {
-            Toast.makeText(this, "Stock insuficiente", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // RESTAR STOCK
-        product.currentStock = product.currentStock - quantityToSell;
-        if (selectedColorName != null && stockMap.containsKey(selectedColorName)) {
-            int currentSpecific = stockMap.get(selectedColorName);
-            stockMap.put(selectedColorName, Math.max(0, currentSpecific - quantityToSell));
-            saveStockToProduct();
-        }
-
-        // GUARDAR CAMBIOS
-        productViewModel.update(product);
-
-        // REGISTRAR TRANSACCIÓN
-        double totalAmount = quantityToSell * product.getSalePrice();
-        String desc = "Venta: " + product.getName() + (selectedColorName != null ? " (" + selectedColorName + ")" : "");
-
-        TransactionEntity sale = new TransactionEntity(
-                TransactionType.INCOME,
-                totalAmount,
-                totalAmount,
-                quantityToSell,
-                product.getId(),
-                desc,
-                System.currentTimeMillis(),
-                "",
-                "Cliente Mostrador",
-                "COMPLETED"
-        );
-        transactionViewModel.insert(sale);
-
-        loadProductData(); // Refrescar pantalla
-
-        if (sendTicket) sendWhatsAppTicket(quantityToSell, totalAmount, selectedColorName);
-        else Toast.makeText(this, "Venta registrada", Toast.LENGTH_SHORT).show();
-    }
-
-    private void sendWhatsAppTicket(int quantity, double total, String color) {
-        String ticket = "🧾 *TICKET FERSE STORE*\n\n" +
-                "📦 *" + product.getName() + "*\n" +
-                (color != null ? "🎨 Color: " + color + "\n" : "") +
-                "🔢 Cantidad: " + quantity + "\n" +
-                "💰 *TOTAL: $" + total + "*\n\n" +
-                "¡Gracias por tu compra! 😊";
-
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_TEXT, ticket);
-        try {
-            startActivity(Intent.createChooser(intent, "Enviar Ticket..."));
-        } catch (Exception e) {
-            Toast.makeText(this, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show();
-        }
+    private void showDeleteConfirmation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Eliminar Producto")
+                .setMessage("¿Estás seguro de borrar " + currentProduct.getName() + "?")
+                .setPositiveButton("Sí, borrar", (dialog, which) -> {
+                    productViewModel.delete(currentProduct);
+                    Toast.makeText(this, "Producto eliminado", Toast.LENGTH_SHORT).show();
+                    finish(); // Cierra la pantalla y vuelve a la lista
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 }

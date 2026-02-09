@@ -1,7 +1,23 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.FerSeStore" parent="Theme.Material3.DayNight">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+<resources>
+    <style name="Theme.Ferse" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryVariant</item>
+        <item name="colorOnPrimary">@color/colorOnPrimary</item>
+        <item name="colorSecondary">@color/colorSecondary</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="actionBarStyle">@style/MiBarraFija</item>
+
+        <item name="android:colorBackground">@color/fondo_noche</item>
+        <item name="colorSurface">@color/tarjeta_noche</item> <item name="android:textColor">@color/texto_noche</item>
+    </style>
+
+    <style name="MiBarraFija" parent="Widget.MaterialComponents.ActionBar.Solid">
+        <item name="background">@color/colorPrimary</item>
+        <item name="titleTextStyle">@style/MiTextoTitulo</item>
+    </style>
+    <style name="MiTextoTitulo" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">#FFFFFF</item>
     </style>
 </resources>

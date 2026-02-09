@@ -1,5 +1,6 @@
 package com.fersestore.app.ui.adapter;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,8 +13,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fersestore.app.R;
 import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.ui.view.ProductDetailActivity;
 
+import java.io.File;
 import java.util.List;
+
+// IMPORTS PARA EL FORMATO DE MONEDA
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 
 public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductViewHolder> {
 
@@ -29,7 +36,6 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         this.listener = listener;
     }
 
-    // ESTA FUNCIÓN FALTABA Y DABA ERROR EN MAINACTIVITY
     public void setProductList(List<ProductEntity> newProducts) {
         this.productList = newProducts;
         notifyDataSetChanged();
@@ -46,18 +52,45 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     public void onBindViewHolder(@NonNull ProductViewHolder holder, int position) {
         ProductEntity product = productList.get(position);
 
-        // Usamos los getters o acceso directo, ambos funcionan ahora
         holder.tvName.setText(product.name);
-        holder.tvPrice.setText("$ " + product.salePrice);
+
+        // --- INICIO MAGIA DEL PRECIO (FORMATO LIMPIO) ---
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        symbols.setGroupingSeparator('.');
+        symbols.setDecimalSeparator(',');
+        DecimalFormat decimalFormat = new DecimalFormat("#,###.##", symbols);
+        holder.tvPrice.setText("$ " + decimalFormat.format(product.salePrice));
+        // --- FIN MAGIA DEL PRECIO ---
+
         holder.tvStock.setText("Stock: " + product.currentStock);
 
+        // --- LÓGICA PARA CARGAR IMAGEN ---
+        holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery);
+
         if (product.imageUri != null && !product.imageUri.isEmpty()) {
-            holder.imgProduct.setImageURI(Uri.parse(product.imageUri));
-        } else {
-            holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery);
+            try {
+                File imgFile = new File(product.imageUri);
+                if (imgFile.exists()) {
+                    holder.imgProduct.setImageURI(Uri.fromFile(imgFile));
+                } else {
+                    holder.imgProduct.setImageURI(Uri.parse(product.imageUri));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
-        holder.itemView.setOnClickListener(v -> listener.onItemClick(product));
+        // --- CLICK PARA IR AL DETALLE (CORREGIDO) ---
+        holder.itemView.setOnClickListener(v -> {
+            // 1. Creamos el Intent para ir a la pantalla de detalle
+            Intent intent = new Intent(v.getContext(), ProductDetailActivity.class);
+
+            // 2. Metemos el producto entero con la clave que espera el detalle
+            intent.putExtra("product_data", product);
+
+            // 3. ¡Arrancamos!
+            v.getContext().startActivity(intent);
+        });
     }
 
     @Override
@@ -67,14 +100,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
     static class ProductViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvPrice, tvStock;
-        ImageView imgProduct; // AQUI DABA ERROR ANTES
+        ImageView imgProduct;
 
         public ProductViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_name);
             tvPrice = itemView.findViewById(R.id.tv_price);
             tvStock = itemView.findViewById(R.id.tv_stock);
-            // Ahora esto funcionará porque actualizamos item_product.xml
             imgProduct = itemView.findViewById(R.id.img_product);
         }
     }

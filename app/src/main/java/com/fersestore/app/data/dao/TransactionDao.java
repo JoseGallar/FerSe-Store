@@ -23,11 +23,10 @@ public interface TransactionDao {
     @Delete
     void delete(TransactionEntity transaction);
 
-    // Obtener todo el historial
     @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
     LiveData<List<TransactionEntity>> getAllTransactions();
 
-    // CORRECCIÓN AQUÍ: Antes decía 'amount', ahora usamos 'totalAmount'
+    // CORREGIDO: Usamos totalAmount
     @Query("SELECT SUM(totalAmount) FROM transactions WHERE type = 'INCOME'")
     LiveData<Double> getTotalIncome();
 

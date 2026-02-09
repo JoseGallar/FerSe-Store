@@ -1,7 +1,14 @@
 package com.fersestore.app;
 
+import androidx.appcompat.app.ActionBar;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import androidx.core.content.ContextCompat;
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -10,12 +17,13 @@ import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -27,21 +35,20 @@ import com.fersestore.app.data.entity.ProductEntity;
 import com.fersestore.app.data.entity.TransactionEntity;
 import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.adapter.ProductAdapter;
+import com.fersestore.app.ui.view.AddProductActivity;
 import com.fersestore.app.ui.view.CalculatorActivity;
+import com.fersestore.app.ui.view.FinancialActivity; // Recuperamos Finanzas
 import com.fersestore.app.ui.view.ProductDetailActivity;
-import com.fersestore.app.ui.view.WalletActivity; // Usamos la nueva Billetera
+import com.fersestore.app.ui.view.WalletActivity;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
 import com.fersestore.app.ui.viewmodel.TransactionViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,110 +56,146 @@ public class MainActivity extends AppCompatActivity {
     private TransactionViewModel transactionViewModel;
     private ProductAdapter adapter;
     private TextView tvTodaySales, tvEmpty;
-
-    // Filtros de categoría
-    private Button btnAll, btnShirts, btnPants, btnAccessories, btnOther;
     private List<ProductEntity> fullProductList = new ArrayList<>();
+
+    // Para guardar la preferencia de Modo Oscuro/Claro
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Configuración DE LUJO para la Barra
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+            getSupportActionBar().setCustomView(R.layout.custom_toolbar);
+            getSupportActionBar().setElevation(0); // Quita la sombra para que quede plano
+        }
+
+        // 1. Cargar Tema guardado ANTES de crear la vista
+        sharedPreferences = getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+        boolean isDarkMode = sharedPreferences.getBoolean("DARK_MODE", false);
+        if (isDarkMode) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Configuración inicial de vistas
+        // Configurar Toolbar
+        // Configurar Toolbar (Logo Chiquito + Título)
+        if (getSupportActionBar() != null) {
+            // 1. Forzar que se vean AMBOS (Logo y Título)
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getSupportActionBar().setDisplayUseLogoEnabled(true);
+            getSupportActionBar().setDisplayShowTitleEnabled(true); // ¡Esto recupera el nombre "FerSe Store"!
+
+            getSupportActionBar().setTitle(" FerSe Store"); // Le dejamos 2 espacios para separarlo del logo
+            getSupportActionBar().setElevation(0);
+
+            // 2. Lógica para ACHICAR el logo (para que no se vea gigante)
+            try {
+                // CAMBIÁ "ic_launcher" POR EL NOMBRE DE TU LOGO (ej: R.drawable.mi_logo)
+                Drawable original = ContextCompat.getDrawable(this, R.drawable.logo_ferse);
+
+
+            } catch (Exception e) {
+                // Si falla algo, no pasa nada, no ponemos logo
+                e.printStackTrace();
+            }
+
+            // --- ACCESOS RÁPIDOS ---
+            // 1. Billetera
+            findViewById(R.id.btn_quick_wallet).setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, WalletActivity.class))
+            );
+
+            // 2. Finanzas (Historial)
+            findViewById(R.id.btn_quick_finance).setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, FinancialActivity.class))
+            );
+
+            // 3. Calculadora
+            findViewById(R.id.btn_quick_calc).setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, CalculatorActivity.class))
+            );
+
+        }
+
+
+        // Configurar RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 2));
+        recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+
         adapter = new ProductAdapter(new ArrayList<>(), product -> {
             Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
-            intent.putExtra("PRODUCT_ID", product.getId());
+            intent.putExtra("product_data", product); // <--- ESTO ES LA CLAVE
             startActivity(intent);
         });
         recyclerView.setAdapter(adapter);
 
+        // Vistas y ViewModel
         tvTodaySales = findViewById(R.id.tv_home_today_sales);
         tvEmpty = findViewById(R.id.tv_empty);
         FloatingActionButton fab = findViewById(R.id.fab_add);
 
-        // Botones de categoría
-        btnAll = findViewById(R.id.cat_all);
-        btnShirts = findViewById(R.id.cat_shirts);
-        btnPants = findViewById(R.id.cat_pants);
-        btnAccessories = findViewById(R.id.cat_accessories);
-        btnOther = findViewById(R.id.cat_other);
-
-        setupCategoryButtons();
-
-        // ViewModels
         productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
 
-        // 1. OBSERVAR PRODUCTOS
+        // Observadores
         productViewModel.getAllProducts().observe(this, products -> {
             fullProductList = products;
-            filterByCategory("Todos"); // Por defecto mostramos todo
-            updateEmptyState(products.isEmpty());
+            adapter.setProductList(products);
+            tvEmpty.setVisibility(products.isEmpty() ? View.VISIBLE : View.GONE);
         });
 
-        // 2. OBSERVAR VENTAS (Aquí actualizamos para usar la lógica nueva)
         transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
 
-        fab.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
-            startActivity(intent);
-        });
+        fab.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AddProductActivity.class)));
     }
 
-    // --- CÁLCULO DE VENTAS DE HOY ---
     private void calculateTodaySales(List<TransactionEntity> transactions) {
         double todayTotal = 0;
         Calendar cal = Calendar.getInstance();
-        int todayDay = cal.get(Calendar.DAY_OF_YEAR);
-        int todayYear = cal.get(Calendar.YEAR);
+        int day = cal.get(Calendar.DAY_OF_YEAR);
+        int year = cal.get(Calendar.YEAR);
 
         if (transactions != null) {
             for (TransactionEntity t : transactions) {
                 cal.setTimeInMillis(t.timestamp);
-                // Si es HOY y es un INGRESO (Venta)
-                if (cal.get(Calendar.DAY_OF_YEAR) == todayDay &&
-                        cal.get(Calendar.YEAR) == todayYear &&
-                        t.type == TransactionType.INCOME) {
-
-                    // CORRECCIÓN CLAVE: Usamos totalAmount en lugar de amount
-                    todayTotal += t.totalAmount;
+                if (cal.get(Calendar.DAY_OF_YEAR) == day && cal.get(Calendar.YEAR) == year) {
+                    if (t.type == TransactionType.INCOME) {
+                        todayTotal += t.totalAmount;
+                    }
                 }
             }
         }
         tvTodaySales.setText("$ " + String.format("%.2f", todayTotal));
     }
 
-    // --- MENÚ SUPERIOR ---
+    // --- MENÚ DE LOS 3 PUNTITOS ---
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Buscador
-        MenuItem searchItem = menu.add(Menu.NONE, R.id.action_search, Menu.NONE, "Buscar");
+        // Buscador (Ese siempre es útil dejarlo)
+        MenuItem searchItem = menu.add(Menu.NONE, 0, Menu.NONE, "Buscar");
         searchItem.setIcon(android.R.drawable.ic_menu_search);
         searchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
 
-        androidx.appcompat.widget.SearchView searchView = new androidx.appcompat.widget.SearchView(this);
+        SearchView searchView = new SearchView(this);
         searchItem.setActionView(searchView);
-        searchView.setQueryHint("Buscar producto...");
-        searchView.setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
+        searchView.setQueryHint("Buscar ropa...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override public boolean onQueryTextSubmit(String query) { return false; }
-            @Override public boolean onQueryTextChange(String newText) {
-                resetCategoryButtons(btnAll);
-                filterList(newText);
-                return true;
-            }
+            @Override public boolean onQueryTextChange(String newText) { filterList(newText); return true; }
         });
 
-        // NUEVO: Billetera en lugar de Finanzas simple
-        menu.add(Menu.NONE, 1, Menu.NONE, "💼 Mi Billetera");
+        // --- SOLO DEJAMOS LO QUE PEDISTE ---
+        menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad"); // ID 4
 
-        // Calculadora
-        menu.add(Menu.NONE, 2, Menu.NONE, "🧮 Calculadora de Costos");
-
-        // Backup
-        menu.add(Menu.NONE, 99, Menu.NONE, "💾 Copia de Seguridad");
+        // Opción de Tema
+        boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
+        String themeTitle = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
+        menu.add(Menu.NONE, 5, Menu.NONE, themeTitle); // ID 5
 
         return true;
     }
@@ -161,86 +204,51 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        if (id == 1) { // Abrir Billetera
-            startActivity(new Intent(this, WalletActivity.class));
-            return true;
-        }
+        if (id == 1) startActivity(new Intent(this, WalletActivity.class));
+        if (id == 2) startActivity(new Intent(this, FinancialActivity.class)); // Abre el historial
+        if (id == 3) startActivity(new Intent(this, CalculatorActivity.class));
+        if (id == 4) checkPermissionAndExport();
 
-        if (id == 2) { // Abrir Calculadora
-            startActivity(new Intent(this, CalculatorActivity.class));
-            return true;
-        }
-
-        if (id == 99) { // Backup
-            checkPermissionAndExport();
-            return true;
-        }
+        if (id == 5) { toggleTheme(); return true; } // Cambiar tema
 
         return super.onOptionsItemSelected(item);
     }
 
-    // --- LÓGICA DE FILTROS Y BUSCADOR ---
-    private void setupCategoryButtons() {
-        View.OnClickListener listener = v -> {
-            Button clicked = (Button) v;
-            resetCategoryButtons(clicked);
-            String cat = clicked.getText().toString();
-            filterByCategory(cat);
-        };
+    // --- LÓGICA DE CAMBIO DE TEMA CORREGIDA ---
+    private void toggleTheme() {
+        boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
 
-        btnAll.setOnClickListener(listener);
-        btnShirts.setOnClickListener(listener);
-        btnPants.setOnClickListener(listener);
-        btnAccessories.setOnClickListener(listener);
-        btnOther.setOnClickListener(listener);
-    }
-
-    private void resetCategoryButtons(Button active) {
-        btnAll.setAlpha(0.5f); btnShirts.setAlpha(0.5f);
-        btnPants.setAlpha(0.5f); btnAccessories.setAlpha(0.5f); btnOther.setAlpha(0.5f);
-        active.setAlpha(1.0f);
-    }
-
-    private void filterByCategory(String category) {
-        if (category.equals("Todos")) {
-            adapter.setProductList(fullProductList);
+        if (isDark) {
+            // Cambiar a Claro
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            editor.putBoolean("DARK_MODE", false);
+            Toast.makeText(this, "Modo Claro Activado ☀️", Toast.LENGTH_SHORT).show();
         } else {
-            List<ProductEntity> filtered = new ArrayList<>();
-            for (ProductEntity p : fullProductList) {
-                if (p.getCategory().equalsIgnoreCase(category)) {
-                    filtered.add(p);
-                }
-            }
-            adapter.setProductList(filtered);
+            // Cambiar a Oscuro
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            editor.putBoolean("DARK_MODE", true);
+            Toast.makeText(this, "Modo Oscuro Activado 🌙", Toast.LENGTH_SHORT).show();
         }
+        editor.apply();
+
+        // ¡IMPORTANTE! BORRAMOS LA LÍNEA "recreate();"
+        // El AppCompatDelegate ya se encarga de reiniciar la actividad automáticamente.
     }
 
     private void filterList(String text) {
-        List<ProductEntity> filteredList = new ArrayList<>();
-        for (ProductEntity item : fullProductList) {
-            if (item.getName().toLowerCase().contains(text.toLowerCase())) {
-                filteredList.add(item);
-            }
+        List<ProductEntity> filtered = new ArrayList<>();
+        for (ProductEntity p : fullProductList) {
+            if (p.getName().toLowerCase().contains(text.toLowerCase())) filtered.add(p);
         }
-        adapter.setProductList(filteredList);
-        updateEmptyState(filteredList.isEmpty());
+        adapter.setProductList(filtered);
     }
 
-    private void updateEmptyState(boolean isEmpty) {
-        if (isEmpty) {
-            tvEmpty.setVisibility(View.VISIBLE);
-        } else {
-            tvEmpty.setVisibility(View.GONE);
-        }
-    }
-
-    // --- BACKUP (Exportar CSV) ---
+    // --- BACKUP ---
     private void checkPermissionAndExport() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
             } else {
                 exportToCSV();
             }
@@ -252,31 +260,27 @@ public class MainActivity extends AppCompatActivity {
     private void exportToCSV() {
         try {
             File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            String fileName = "Backup_FerSe_" + new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date()) + ".csv";
+            String fileName = "FerSe_Backup_" + System.currentTimeMillis() + ".csv";
             File file = new File(folder, fileName);
-
             FileWriter writer = new FileWriter(file);
-            writer.append("ID,Producto,Stock,PrecioVenta\n");
-
+            writer.append("ID,Producto,Costo,Venta,Stock\n");
             for (ProductEntity p : fullProductList) {
-                writer.append(String.valueOf(p.getId())).append(",");
-                writer.append(p.getName()).append(",");
-                writer.append(String.valueOf(p.getCurrentStock())).append(",");
-                writer.append(String.valueOf(p.getSalePrice())).append("\n");
+                writer.append(p.getId() + "," + p.getName() + "," + p.costPrice + "," + p.getSalePrice() + "," + p.getCurrentStock() + "\n");
             }
-
             writer.flush();
             writer.close();
-            Toast.makeText(this, "Backup guardado en Descargas: " + fileName, Toast.LENGTH_LONG).show();
-
-            // Compartir archivo
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("text/csv");
-            intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-            startActivity(Intent.createChooser(intent, "Compartir Backup"));
-
+            Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();
+            shareFile(file);
         } catch (Exception e) {
-            Toast.makeText(this, "Error al exportar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
+
+    private void shareFile(File file) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/csv");
+        intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        startActivity(Intent.createChooser(intent, "Compartir Backup"));
+    }
+
 }

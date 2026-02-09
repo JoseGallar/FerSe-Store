@@ -1,90 +1,76 @@
 package com.fersestore.app.ui.view;
 
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.Toast;
-
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.fersestore.app.R;
 import com.fersestore.app.data.entity.TransactionEntity;
 import com.fersestore.app.domain.model.TransactionType;
+import com.fersestore.app.ui.adapter.TransactionAdapter;
 import com.fersestore.app.ui.viewmodel.TransactionViewModel;
+
+import java.util.List;
 
 public class FinancialActivity extends AppCompatActivity {
 
     private TransactionViewModel transactionViewModel;
-    private EditText etAmount, etDescription;
-    private Spinner spinnerType;
+    private TextView tvIncome, tvExpense, tvBalance;
+    private TransactionAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_financial); // Asegurate de que este layout exista
+        setContentView(R.layout.activity_financial);
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Registrar Movimiento 💰");
+            getSupportActionBar().setTitle("Finanzas");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
+        // Vincular vistas
+        tvIncome = findViewById(R.id.tv_total_income);
+        tvExpense = findViewById(R.id.tv_total_expense);
+        tvBalance = findViewById(R.id.tv_balance);
+        RecyclerView recyclerView = findViewById(R.id.rv_transactions);
+
+        // Configurar lista
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new TransactionAdapter();
+        recyclerView.setAdapter(adapter);
+
+        // ViewModel
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
 
-        etAmount = findViewById(R.id.et_amount);
-        etDescription = findViewById(R.id.et_description);
-        spinnerType = findViewById(R.id.spinner_type);
-        Button btnSave = findViewById(R.id.btn_save_transaction);
-
-        // Configurar el selector de Tipo (Ingreso / Gasto)
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item,
-                new String[]{"Ingreso (Venta Extra)", "Gasto (Salida)"});
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerType.setAdapter(adapter);
-
-        btnSave.setOnClickListener(v -> saveTransaction());
+        // Observar datos
+        transactionViewModel.getHistory().observe(this, transactions -> {
+            adapter.setTransactions(transactions);
+            calculateTotals(transactions);
+        });
     }
 
-    private void saveTransaction() {
-        String amountStr = etAmount.getText().toString().trim();
-        String description = etDescription.getText().toString().trim();
+    private void calculateTotals(List<TransactionEntity> transactions) {
+        double income = 0;
+        double expense = 0;
 
-        if (amountStr.isEmpty() || description.isEmpty()) {
-            Toast.makeText(this, "Por favor completá los campos", Toast.LENGTH_SHORT).show();
-            return;
+        if (transactions != null) {
+            for (TransactionEntity t : transactions) {
+                if (t.type == TransactionType.INCOME) {
+                    income += t.totalAmount;
+                } else {
+                    expense += t.totalAmount;
+                }
+            }
         }
 
-        double amount = Double.parseDouble(amountStr);
+        double balance = income - expense;
 
-        // Decidir si es INGRESO o GASTO según lo que eligió en el spinner
-        TransactionType type;
-        if (spinnerType.getSelectedItemPosition() == 0) {
-            type = TransactionType.INCOME;
-        } else {
-            type = TransactionType.EXPENSE;
-        }
-
-        // AQUÍ ESTABA EL ERROR: Ahora usamos el constructor nuevo con los 10 datos
-        TransactionEntity transaction = new TransactionEntity(
-                type,
-                amount,         // totalAmount (Monto Total)
-                amount,         // paidAmount (Asumimos que se pagó todo)
-                1,              // Cantidad (1 por defecto)
-                0,              // ID Producto (0 porque es un movimiento manual)
-                description,    // Descripción
-                System.currentTimeMillis(), // Fecha y hora actual
-                "",             // Nota vacía
-                "Manual",       // Cliente: "Manual" porque lo cargaste vos a mano
-                "COMPLETED"     // Estado: Completado
-        );
-
-        transactionViewModel.insert(transaction);
-
-        Toast.makeText(this, "Movimiento guardado", Toast.LENGTH_SHORT).show();
-        finish(); // Cierra la pantalla y vuelve atrás
+        tvIncome.setText(String.format("$ %.2f", income));
+        tvExpense.setText(String.format("$ %.2f", expense));
+        tvBalance.setText(String.format("$ %.2f", balance));
     }
 
     @Override

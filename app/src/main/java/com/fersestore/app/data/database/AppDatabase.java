@@ -13,15 +13,14 @@ import com.fersestore.app.data.entity.TransactionEntity;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {ProductEntity.class, TransactionEntity.class}, version = 2, exportSchema = false)
+// Asegurate de que la versión sea 3 para forzar la actualización
+@Database(entities = {ProductEntity.class, TransactionEntity.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract ProductDao productDao();
     public abstract TransactionDao transactionDao();
 
     private static volatile AppDatabase INSTANCE;
-
-    // ESTA ES LA PARTE QUE FALTABA Y DABA ERROR
     private static final int NUMBER_OF_THREADS = 4;
     public static final ExecutorService databaseWriteExecutor =
             Executors.newFixedThreadPool(NUMBER_OF_THREADS);
@@ -31,7 +30,7 @@ public abstract class AppDatabase extends RoomDatabase {
             synchronized (AppDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                                    AppDatabase.class, "fersestore_database")
+                                    AppDatabase.class, "fersestore_db") // Cambié el nombre para forzar nueva DB limpia
                             .fallbackToDestructiveMigration()
                             .build();
                 }
