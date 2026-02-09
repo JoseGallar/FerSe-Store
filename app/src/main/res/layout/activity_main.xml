@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="?android:attr/colorBackground">
+
+        <ImageView
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:src="@drawable/logo_ferse"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1565C0">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ventas de HOY"
+                        android:textColor="#BBDEFB"
+                        android:textSize="12sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/tv_home_today_sales"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$ 0.00"
+                        android:textColor="#FFFFFF"
+                        android:textSize="24sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_my_calendar"
+                    app:tint="#FFFFFF"
+                    android:alpha="0.8"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/cat_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Todos"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#1976D2"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/cat_shirts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Remeras"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#90A4AE"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/cat_pants"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Pantalones"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#90A4AE"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/cat_accessories"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Accesorios"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#90A4AE"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/cat_other"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Otros"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#90A4AE"
+                    android:layout_marginEnd="8dp"/>
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/tv_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No hay productos"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_gravity="center"
+            android:layout_marginTop="32dp"
+            android:visibility="gone"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="8dp"
+            android:clipToPadding="false"
+            tools:listitem="@layout/item_product" />
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="Agregar producto" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

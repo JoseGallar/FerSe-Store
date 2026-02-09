@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Calculadora de Costos 🧮"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginBottom="24dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:cardBackgroundColor="#263238"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="COSTOS EXTRAS (Envío, Bolsas)"
+                    android:textColor="#B0BEC5"
+                    android:textStyle="bold"/>
+
+                <EditText
+                    android:id="@+id/et_shipping_cost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:hint="$ 0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp"
+                    android:inputType="numberDecimal"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="PRODUCTOS EN LA FACTURA"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:textColor="?android:attr/textColorPrimary"/>
+
+        <LinearLayout
+            android:id="@+id/container_items"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        <Button
+            android:id="@+id/btn_add_item_row"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+ Agregar Producto"
+            android:layout_gravity="end"
+            android:backgroundTint="#546E7A"
+            android:layout_marginBottom="24dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ganancia deseada (%):"
+                android:textSize="18sp"
+                android:textColor="?android:attr/textColorPrimary"/>
+            <EditText
+                android:id="@+id/et_profit_percent"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="50"
+                android:inputType="number"
+                android:gravity="center"
+                android:layout_marginStart="16dp"
+                android:textColor="?android:attr/textColorPrimary"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_calculate"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="CALCULAR PRECIOS"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#FFC107"
+            android:textColor="#000000"/>
+
+        <TextView
+            android:id="@+id/tv_results"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text=""
+            android:textSize="16sp"
+            android:textColor="?android:attr/textColorPrimary"/>
+
+    </LinearLayout>
+</ScrollView>

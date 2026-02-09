@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#FAFAFA">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nuevo Producto 👕"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <ImageView
+            android:id="@+id/img_preview"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:src="@android:drawable/ic_menu_gallery"
+            android:scaleType="centerCrop"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_select_img"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Elegir Foto"
+            android:layout_gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <EditText
+            android:id="@+id/et_prod_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nombre del Producto"
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Categoría:"
+            android:textStyle="bold"/>
+        <Spinner
+            android:id="@+id/spinner_category"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/et_prod_cost"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:hint="Costo ($)"
+                android:inputType="numberDecimal"
+                android:minHeight="48dp"
+                android:layout_marginEnd="8dp"/>
+
+            <EditText
+                android:id="@+id/et_prod_price"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:hint="Venta ($)"
+                android:inputType="numberDecimal"
+                android:minHeight="48dp"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/et_prod_stock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Stock Inicial (Cantidad)"
+            android:inputType="number"
+            android:minHeight="48dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btn_save_prod"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="GUARDAR PRODUCTO"
+            android:textSize="18sp"
+            android:backgroundTint="#4CAF50"/>
+
+    </LinearLayout>
+</ScrollView>
