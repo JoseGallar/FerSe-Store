@@ -79,8 +79,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
 
         // 4. Botones de Gestión (Abajo)
-        findViewById(R.id.btn_delete).setOnClickListener(v -> showDeleteConfirmation());
-        findViewById(R.id.btn_edit).setOnClickListener(v -> Toast.makeText(this, "Edición próximamente...", Toast.LENGTH_SHORT).show());
 
         // 5. Botones de Acción (Vender / Reponer)
         findViewById(R.id.btn_action_sell).setOnClickListener(v -> prepararVenta());
@@ -210,5 +208,44 @@ public class ProductDetailActivity extends AppCompatActivity {
                     finish();
                 })
                 .setNegativeButton("Cancelar", null).show();
+    }
+
+    // 1. Inflar el menú (Poner el lápiz arriba)
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_detail, menu);
+        return true;
+    }
+
+    // 2. Detectar click en el lápiz
+    @Override
+    public boolean onOptionsItemSelected(@androidx.annotation.NonNull android.view.MenuItem item) {
+        if (item.getItemId() == R.id.action_manage) {
+            showOptionsPopup(findViewById(R.id.action_manage));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    // 3. Mostrar el menú pequeñito (Popup)
+    private void showOptionsPopup(android.view.View view) {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, view);
+        // Agregamos las opciones "Editar" y "Eliminar"
+        popup.getMenu().add(0, 1, 0, "✏️ Editar Producto");
+        popup.getMenu().add(0, 2, 0, "🗑️ Eliminar Producto");
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                // Opción Editar
+                android.widget.Toast.makeText(this, "Edición próximamente...", android.widget.Toast.LENGTH_SHORT).show();
+                return true;
+            } else if (item.getItemId() == 2) {
+                // Opción Eliminar
+                showDeleteConfirmation();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
     }
 }

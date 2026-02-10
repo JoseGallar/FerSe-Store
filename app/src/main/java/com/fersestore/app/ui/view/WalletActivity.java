@@ -49,7 +49,7 @@ public class WalletActivity extends AppCompatActivity {
         // 1. Cargar Inversión Guardada (usamos una memoria simple 'SharedPreferences')
         SharedPreferences prefs = getSharedPreferences("FerSePrefs", MODE_PRIVATE);
         initialInvestment = prefs.getFloat("INITIAL_INVESTMENT", 0);
-        etInitialInvestment.setText(String.valueOf(initialInvestment));
+        etInitialInvestment.setText(String.format("%.0f", initialInvestment));
 
         // 2. Escuchar cambios en las transacciones para calcular la CAJA
         transactionViewModel.getHistory().observe(this, this::calculateFinances);
@@ -98,8 +98,8 @@ public class WalletActivity extends AppCompatActivity {
         // FÓRMULA MAESTRA: Caja = Inversión + Ingresos - Gastos
         double currentCash = initialInvestment + totalIncome - totalExpenses;
 
-        tvCurrentCash.setText("$ " + String.format("%.2f", currentCash));
-        tvMoneyOnStreet.setText("$ " + String.format("%.2f", moneyOnStreet));
+        tvCurrentCash.setText("$ " + String.format("%.0f", currentCash));
+        tvMoneyOnStreet.setText("$ " + String.format("%.0f", moneyOnStreet));
     }
 
     private void calculateStockValue(List<ProductEntity> products) {
@@ -110,7 +110,7 @@ public class WalletActivity extends AppCompatActivity {
                 totalStockValue += (p.costPrice * p.currentStock);
             }
         }
-        tvStockValue.setText("$ " + String.format("%.2f", totalStockValue));
+        tvStockValue.setText("$ " + String.format("%.0f", totalStockValue));
     }
 
     private void showExpenseDialog() {

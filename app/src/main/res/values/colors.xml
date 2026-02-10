@@ -11,4 +11,6 @@
     <color name="fondo_noche">#192229</color>
     <color name="tarjeta_noche">#1565C0</color>
     <color name="texto_noche">#FFFFFF</color>
+
+    <color name="dinero_positivo">#2E7D32</color>
 </resources>

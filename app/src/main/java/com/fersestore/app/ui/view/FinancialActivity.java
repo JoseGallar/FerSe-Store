@@ -68,9 +68,9 @@ public class FinancialActivity extends AppCompatActivity {
 
         double balance = income - expense;
 
-        tvIncome.setText(String.format("$ %.2f", income));
-        tvExpense.setText(String.format("$ %.2f", expense));
-        tvBalance.setText(String.format("$ %.2f", balance));
+        tvIncome.setText(String.format("$ %.0f", income));
+        tvExpense.setText(String.format("$ %.0f", expense));
+        tvBalance.setText(String.format("$ %.0f", balance));
     }
 
     @Override
