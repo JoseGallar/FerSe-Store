@@ -159,17 +159,16 @@
                 android:textColor="#757575"
                 android:layout_marginBottom="8dp"/>
 
-            <TextView
-                android:id="@+id/tv_detail_variants"
+            <LinearLayout
+                android:id="@+id/ll_variants_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Negro: 10, Rojo: 5"
-                android:textSize="15sp"
-                android:textColor="?android:attr/textColorSecondary"
-                android:padding="16dp"
+                android:orientation="vertical"
                 android:background="@drawable/bg_input_border"
-                android:lineSpacingExtra="4dp"/>
+                android:padding="8dp"
+                android:layout_marginTop="8dp">
 
+            </LinearLayout>
         </LinearLayout>
 
         <View

@@ -8,13 +8,14 @@ import androidx.room.RoomDatabase;
 import com.fersestore.app.data.dao.ProductDao;
 import com.fersestore.app.data.dao.TransactionDao;
 import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.data.entity.ProductVariantEntity;
 import com.fersestore.app.data.entity.TransactionEntity;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 // Asegurate de que la versión sea 3 para forzar la actualización
-@Database(entities = {ProductEntity.class, TransactionEntity.class}, version = 3, exportSchema = false)
+@Database(entities = {ProductEntity.class, TransactionEntity.class, ProductVariantEntity.class}, version = 4, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract ProductDao productDao();

@@ -13,30 +13,30 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fersestore.app.R;
 import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.data.entity.ProductWithVariants;
 import com.fersestore.app.ui.view.ProductDetailActivity;
 
 import java.io.File;
-import java.util.List;
-
-// IMPORTS PARA EL FORMATO DE MONEDA
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.List;
 
 public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductViewHolder> {
 
-    private List<ProductEntity> productList;
+    // Ahora la lista maneja el "Paquete" (Producto + Variantes)
+    private List<ProductWithVariants> productList;
     private final OnItemClickListener listener;
 
     public interface OnItemClickListener {
         void onItemClick(ProductEntity product);
     }
 
-    public ProductAdapter(List<ProductEntity> productList, OnItemClickListener listener) {
+    public ProductAdapter(List<ProductWithVariants> productList, OnItemClickListener listener) {
         this.productList = productList;
         this.listener = listener;
     }
 
-    public void setProductList(List<ProductEntity> newProducts) {
+    public void setProductList(List<ProductWithVariants> newProducts) {
         this.productList = newProducts;
         notifyDataSetChanged();
     }
@@ -50,21 +50,26 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
     @Override
     public void onBindViewHolder(@NonNull ProductViewHolder holder, int position) {
-        ProductEntity product = productList.get(position);
+        // 1. OBTENER EL PAQUETE COMPLETO
+        ProductWithVariants item = productList.get(position);
+
+        // 2. EXTRAER EL PRODUCTO PADRE (Para nombre, precio, foto)
+        ProductEntity product = item.product;
 
         holder.tvName.setText(product.name);
 
-        // --- INICIO MAGIA DEL PRECIO (FORMATO LIMPIO) ---
+        // --- FORMATO DE PRECIO (Sin decimales, ej: $ 4.500) ---
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
         symbols.setGroupingSeparator('.');
         symbols.setDecimalSeparator(',');
-        DecimalFormat decimalFormat = new DecimalFormat("#,###.##", symbols);
+        DecimalFormat decimalFormat = new DecimalFormat("#,###", symbols);
         holder.tvPrice.setText("$ " + decimalFormat.format(product.salePrice));
-        // --- FIN MAGIA DEL PRECIO ---
 
-        holder.tvStock.setText("Stock: " + product.currentStock);
+        // --- CORRECCIÓN DEL STOCK ---
+        // Usamos el método del paquete que suma los hijos
+        holder.tvStock.setText("Stock: " + item.getTotalStock());
 
-        // --- LÓGICA PARA CARGAR IMAGEN ---
+        // --- CARGAR IMAGEN ---
         holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery);
 
         if (product.imageUri != null && !product.imageUri.isEmpty()) {
@@ -80,21 +85,18 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             }
         }
 
-        // --- CLICK PARA IR AL DETALLE (CORREGIDO) ---
+        // --- CLICK (Ir al detalle) ---
         holder.itemView.setOnClickListener(v -> {
-            // 1. Creamos el Intent para ir a la pantalla de detalle
             Intent intent = new Intent(v.getContext(), ProductDetailActivity.class);
-
-            // 2. Metemos el producto entero con la clave que espera el detalle
+            // Pasamos el producto padre (el detalle luego buscará los colores si hace falta)
             intent.putExtra("product_data", product);
-
-            // 3. ¡Arrancamos!
             v.getContext().startActivity(intent);
         });
     }
 
     @Override
     public int getItemCount() {
+        if (productList == null) return 0;
         return productList.size();
     }
 

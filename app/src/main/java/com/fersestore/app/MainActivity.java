@@ -1,16 +1,19 @@
 package com.fersestore.app;
 
-import androidx.appcompat.app.ActionBar;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SearchView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,15 +23,8 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.appcompat.widget.SearchView;
-import androidx.core.app.ActivityCompat;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.data.entity.ProductWithVariants;
 import com.fersestore.app.data.entity.TransactionEntity;
 import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.adapter.ProductAdapter;
@@ -53,12 +49,15 @@ public class MainActivity extends AppCompatActivity {
     private TransactionViewModel transactionViewModel;
     private ProductAdapter adapter;
     private TextView tvTodaySales, tvEmpty;
-    private List<ProductEntity> fullProductList = new ArrayList<>();
+
+    // CORREGIDO: La lista maestra maneja "Paquetes" (Padre + Hijos)
+    private List<ProductWithVariants> fullProductList = new ArrayList<>();
+
     private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 1. Cargar Tema guardado
+        // 1. Cargar Tema guardado antes de inflar la vista
         sharedPreferences = getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         boolean isDarkMode = sharedPreferences.getBoolean("DARK_MODE", false);
         if (isDarkMode) {
@@ -88,10 +87,10 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- CONEXIÓN CON EL DETALLE ARREGLADA ---
+        // Configurar Adapter
         adapter = new ProductAdapter(new ArrayList<>(), product -> {
+            // Al hacer click, mandamos al Detalle (ProductDetailActivity)
             Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
-            // Mandamos el objeto completo con la llave que espera el detalle
             intent.putExtra("product_data", product);
             startActivity(intent);
         });
@@ -105,15 +104,19 @@ public class MainActivity extends AppCompatActivity {
         productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
 
-        // Observadores
+        // --- OBSERVADORES ---
+
+        // 1. Productos: Actualizamos la lista cuando la base de datos cambie
         productViewModel.getAllProducts().observe(this, products -> {
             fullProductList = products;
             adapter.setProductList(products);
             tvEmpty.setVisibility(products.isEmpty() ? View.VISIBLE : View.GONE);
         });
 
+        // 2. Transacciones: Calculamos lo vendido hoy
         transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
 
+        // Botón agregar
         fab.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
     }
 
@@ -125,19 +128,24 @@ public class MainActivity extends AppCompatActivity {
 
         if (transactions != null) {
             for (TransactionEntity t : transactions) {
-                cal.setTimeInMillis(t.timestamp);
-                if (cal.get(Calendar.DAY_OF_YEAR) == day && cal.get(Calendar.YEAR) == year) {
+                // Verificar si la fecha es HOY
+                Calendar transCal = Calendar.getInstance();
+                transCal.setTimeInMillis(t.timestamp);
+
+                if (transCal.get(Calendar.DAY_OF_YEAR) == day && transCal.get(Calendar.YEAR) == year) {
                     if (t.type == TransactionType.INCOME) {
                         todayTotal += t.totalAmount;
                     }
                 }
             }
         }
-        tvTodaySales.setText("$ " + String.format("%.2f", todayTotal));
+        // CORREGIDO: Formato sin decimales (%.0f)
+        tvTodaySales.setText("$ " + String.format("%.0f", todayTotal));
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Menú Buscar
         MenuItem searchItem = menu.add(Menu.NONE, 0, Menu.NONE, "Buscar");
         searchItem.setIcon(android.R.drawable.ic_menu_search);
         searchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
@@ -150,7 +158,9 @@ public class MainActivity extends AppCompatActivity {
             @Override public boolean onQueryTextChange(String newText) { filterList(newText); return true; }
         });
 
+        // Menús Extras
         menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad");
+
         boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
         String themeTitle = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
         menu.add(Menu.NONE, 5, Menu.NONE, themeTitle);
@@ -177,12 +187,19 @@ public class MainActivity extends AppCompatActivity {
             editor.putBoolean("DARK_MODE", true);
         }
         editor.apply();
+        // No hace falta recreate(), el cambio de modo noche lo hace solo a veces,
+        // pero por seguridad podríamos forzarlo si no refresca.
     }
 
+    // --- CORREGIDO: FILTRADO CON LA NUEVA ESTRUCTURA ---
     private void filterList(String text) {
-        List<ProductEntity> filtered = new ArrayList<>();
-        for (ProductEntity p : fullProductList) {
-            if (p.getName().toLowerCase().contains(text.toLowerCase())) filtered.add(p);
+        List<ProductWithVariants> filtered = new ArrayList<>();
+
+        for (ProductWithVariants item : fullProductList) {
+            // Buscamos dentro del objeto "product" del paquete
+            if (item.product.getName().toLowerCase().contains(text.toLowerCase())) {
+                filtered.add(item);
+            }
         }
         adapter.setProductList(filtered);
     }
@@ -199,17 +216,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // --- CORREGIDO: EXPORTAR CSV CON STOCK CALCULADO ---
     private void exportToCSV() {
         try {
             File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             String fileName = "FerSe_Backup_" + System.currentTimeMillis() + ".csv";
             File file = new File(folder, fileName);
             FileWriter writer = new FileWriter(file);
-            writer.append("ID,Producto,Costo,Venta,Stock\n");
-            for (ProductEntity p : fullProductList) {
-                // Usamos los nombres de variables compatibles con tu ProductEntity
-                writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + p.currentStock + "\n");
+
+            writer.append("ID,Producto,Costo,Venta,Stock Total\n");
+
+            for (ProductWithVariants item : fullProductList) {
+                ProductEntity p = item.product;
+                // Usamos item.getTotalStock() en vez de p.currentStock
+                writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + item.getTotalStock() + "\n");
             }
+
             writer.flush();
             writer.close();
             Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();

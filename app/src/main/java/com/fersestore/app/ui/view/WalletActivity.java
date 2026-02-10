@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.fersestore.app.R;
-import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.data.entity.ProductWithVariants; // <--- OJO: Usamos este ahora
 import com.fersestore.app.data.entity.TransactionEntity;
 import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
@@ -46,18 +46,15 @@ public class WalletActivity extends AppCompatActivity {
         Button btnSaveInv = findViewById(R.id.btn_save_investment);
         Button btnExpense = findViewById(R.id.btn_record_expense);
 
-        // 1. Cargar Inversión Guardada (usamos una memoria simple 'SharedPreferences')
         SharedPreferences prefs = getSharedPreferences("FerSePrefs", MODE_PRIVATE);
         initialInvestment = prefs.getFloat("INITIAL_INVESTMENT", 0);
         etInitialInvestment.setText(String.format("%.0f", initialInvestment));
 
-        // 2. Escuchar cambios en las transacciones para calcular la CAJA
         transactionViewModel.getHistory().observe(this, this::calculateFinances);
 
-        // 3. Calcular valor del Stock (Ropa)
+        // AQUÍ ESTABA EL ERROR: Ahora observamos "ProductWithVariants"
         productViewModel.getAllProducts().observe(this, this::calculateStockValue);
 
-        // BOTÓN GUARDAR INVERSIÓN
         btnSaveInv.setOnClickListener(v -> {
             String amountStr = etInitialInvestment.getText().toString().trim();
             if (!amountStr.isEmpty()) {
@@ -65,49 +62,43 @@ public class WalletActivity extends AppCompatActivity {
                 prefs.edit().putFloat("INITIAL_INVESTMENT", amount).apply();
                 initialInvestment = amount;
                 Toast.makeText(this, "Inversión actualizada", Toast.LENGTH_SHORT).show();
-                // Forzamos recalculo refrescando la actividad o esperando al observer
                 recreate();
             }
         });
 
-        // BOTÓN REGISTRAR GASTO (COMPRA DE MERCADERÍA)
         btnExpense.setOnClickListener(v -> showExpenseDialog());
     }
 
     private void calculateFinances(List<TransactionEntity> transactions) {
-        double totalIncome = 0;   // Plata que entró (Ventas cobradas)
-        double totalExpenses = 0; // Plata que salió (Gastos)
-        double moneyOnStreet = 0; // Plata que me deben
+        double totalIncome = 0;
+        double totalExpenses = 0;
+        double moneyOnStreet = 0;
 
         if (transactions != null) {
             for (TransactionEntity t : transactions) {
                 if (t.type == TransactionType.INCOME) {
-                    totalIncome += t.paidAmount; // Sumamos solo lo que PAGARON
-
-                    // Si el total es mayor a lo pagado, la diferencia me la deben
+                    totalIncome += t.paidAmount;
                     if (t.totalAmount > t.paidAmount) {
                         moneyOnStreet += (t.totalAmount - t.paidAmount);
                     }
-                }
-                else if (t.type == TransactionType.EXPENSE) {
+                } else if (t.type == TransactionType.EXPENSE) {
                     totalExpenses += t.totalAmount;
                 }
             }
         }
 
-        // FÓRMULA MAESTRA: Caja = Inversión + Ingresos - Gastos
         double currentCash = initialInvestment + totalIncome - totalExpenses;
-
         tvCurrentCash.setText("$ " + String.format("%.0f", currentCash));
         tvMoneyOnStreet.setText("$ " + String.format("%.0f", moneyOnStreet));
     }
 
-    private void calculateStockValue(List<ProductEntity> products) {
+    // CORREGIDO: Recibe ProductWithVariants
+    private void calculateStockValue(List<ProductWithVariants> products) {
         double totalStockValue = 0;
         if (products != null) {
-            for (ProductEntity p : products) {
-                // Valor mercadería = Costo * Stock Actual
-                totalStockValue += (p.costPrice * p.currentStock);
+            for (ProductWithVariants item : products) {
+                // Multiplicamos Costo * Stock Total (Suma de variantes)
+                totalStockValue += (item.product.costPrice * item.getTotalStock());
             }
         }
         tvStockValue.setText("$ " + String.format("%.0f", totalStockValue));
@@ -115,13 +106,12 @@ public class WalletActivity extends AppCompatActivity {
 
     private void showExpenseDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Registrar Gasto / Compra 💸");
+        builder.setTitle("Registrar Gasto 💸");
 
         final EditText inputDesc = new EditText(this);
-        inputDesc.setHint("Descripción (Ej: Compra Mochilas)");
-
+        inputDesc.setHint("Descripción (Ej: Bolsas)");
         final EditText inputAmount = new EditText(this);
-        inputAmount.setHint("Monto Total ($)");
+        inputAmount.setHint("Monto ($)");
         inputAmount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
 
         android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
@@ -131,31 +121,19 @@ public class WalletActivity extends AppCompatActivity {
         layout.addView(inputAmount);
         builder.setView(layout);
 
-        builder.setPositiveButton("REGISTRAR GASTO", (dialog, which) -> {
+        builder.setPositiveButton("REGISTRAR", (dialog, which) -> {
             String desc = inputDesc.getText().toString().trim();
             String amountStr = inputAmount.getText().toString().trim();
-
             if (!desc.isEmpty() && !amountStr.isEmpty()) {
                 double amount = Double.parseDouble(amountStr);
-
-                // Guardar Gasto
                 TransactionEntity expense = new TransactionEntity(
-                        TransactionType.EXPENSE,
-                        amount,
-                        amount, // Pagado full
-                        1,
-                        0,      // Sin ID de producto específico
-                        desc,
-                        System.currentTimeMillis(),
-                        "",
-                        "Proveedor",
-                        "COMPLETED"
+                        TransactionType.EXPENSE, amount, amount, 1, 0,
+                        desc, System.currentTimeMillis(), "", "Proveedor", "COMPLETED"
                 );
                 transactionViewModel.insert(expense);
-                Toast.makeText(this, "Gasto descontado de caja", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Gasto registrado", Toast.LENGTH_SHORT).show();
             }
         });
-        builder.setNegativeButton("Cancelar", null);
-        builder.show();
+        builder.setNegativeButton("Cancelar", null).show();
     }
 }

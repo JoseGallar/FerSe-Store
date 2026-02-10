@@ -3,10 +3,10 @@ package com.fersestore.app.data.entity;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
-import java.io.Serializable; // <--- ESTO ES VITAL PARA QUE NO CRASHEE AL VER DETALLE
+import java.io.Serializable;
 
 @Entity(tableName = "products")
-public class ProductEntity implements Serializable { // <--- Agregado el implements
+public class ProductEntity implements Serializable {
 
     @PrimaryKey(autoGenerate = true)
     public int id;
@@ -15,42 +15,28 @@ public class ProductEntity implements Serializable { // <--- Agregado el impleme
     public String category;
     public double costPrice;
     public double salePrice;
-    public int currentStock;
     public String imageUri;
-    public String stockBreakdown; // Mantenemos tu nombre original
 
-    // 1. Constructor vacío (Room)
+    // Agregamos fecha para poder ordenar por "Más nuevos"
+    public long createdAt;
+
     public ProductEntity() {}
 
-    // 2. Constructor lleno (Ignorado por Room, usado por nosotros)
     @Ignore
-    public ProductEntity(String name, String category, double costPrice, double salePrice, int currentStock, String imageUri, String stockBreakdown) {
+    public ProductEntity(String name, String category, double costPrice, double salePrice, String imageUri) {
         this.name = name;
         this.category = category;
         this.costPrice = costPrice;
         this.salePrice = salePrice;
-        this.currentStock = currentStock;
         this.imageUri = imageUri;
-        this.stockBreakdown = stockBreakdown;
+        this.createdAt = System.currentTimeMillis();
     }
 
-    // --- GETTERS ORIGINALES (Para que MainActivity no falle) ---
+    // Getters para que la UI funcione (parcialmente)
     public int getId() { return id; }
     public String getName() { return name; }
     public String getCategory() { return category; }
-    public double getSalePrice() { return salePrice; }
-    public int getCurrentStock() { return currentStock; }
-    public String getImageUri() { return imageUri; }
-    public String getStockBreakdown() { return stockBreakdown; }
     public double getCostPrice() { return costPrice; }
-
-    // --- ALIAS NUEVOS (Para que ProductDetailActivity funcione) ---
-    // El detalle busca "getPrice", nosotros le damos "salePrice"
-    public double getPrice() { return salePrice; }
-
-    // El detalle busca "getStock", nosotros le damos "currentStock"
-    public int getStock() { return currentStock; }
-
-    // El detalle busca "getDescription", nosotros le damos "stockBreakdown"
-    public String getDescription() { return stockBreakdown; }
+    public double getSalePrice() { return salePrice; }
+    public String getImageUri() { return imageUri; }
 }

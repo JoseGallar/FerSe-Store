@@ -33,6 +33,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.fersestore.app.R;
 import com.fersestore.app.data.entity.ProductEntity;
+import com.fersestore.app.data.entity.ProductVariantEntity;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
 
 import java.io.File;
@@ -206,27 +207,44 @@ public class AddProductActivity extends AppCompatActivity {
         String priceStr = etPrice.getText().toString().trim();
         String category = spinnerCategory.getSelectedItem().toString();
 
-        // 1. Obtener el Total Calculado
-        String totalStockStr = tvTotalStock.getText().toString();
-
-        // 2. Generar el texto del detalle (Ej: "Negro: 10, Rojo: 5")
-        StringBuilder detailBuilder = new StringBuilder();
-        for (View row : variantRows) {
-            EditText etColor = row.findViewById(R.id.et_variant_name);
-            EditText etQty = row.findViewById(R.id.et_variant_qty);
-            String color = etColor.getText().toString().trim();
-            String qty = etQty.getText().toString().trim();
-
-            if (!color.isEmpty() && !qty.isEmpty() && !qty.equals("0")) {
-                if (detailBuilder.length() > 0) detailBuilder.append(", ");
-                detailBuilder.append(color).append(": ").append(qty);
-            }
-        }
-        String variantsDetail = detailBuilder.toString();
-
         if (name.isEmpty() || costStr.isEmpty() || priceStr.isEmpty()) {
             Toast.makeText(this, "Completá los datos básicos", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        // 1. PREPARAR LA LISTA DE VARIANTES (LOS HIJOS)
+        List<ProductVariantEntity> variants = new ArrayList<>();
+        int totalCalculatedStock = 0;
+
+        for (View row : variantRows) {
+            EditText etColor = row.findViewById(R.id.et_variant_name);
+            EditText etQty = row.findViewById(R.id.et_variant_qty);
+
+            String colorName = etColor.getText().toString().trim();
+            String qtyStr = etQty.getText().toString().trim();
+
+            if (!colorName.isEmpty() && !qtyStr.isEmpty()) {
+                int qty = Integer.parseInt(qtyStr);
+                if (qty > 0) {
+                    // Creamos el objeto variante real
+                    // (Size lo dejamos vacío por ahora o podés poner "Único")
+                    variants.add(new ProductVariantEntity("Único", colorName, qty));
+                    totalCalculatedStock += qty;
+                }
+            }
+        }
+
+        // Si no cargó ninguna variante, obligamos a crear al menos una "Estándar"
+        if (variants.isEmpty()) {
+            // Si el usuario puso stock total manual pero no variantes, creamos una variante genérica
+            String manualStockStr = tvTotalStock.getText().toString();
+            int manualStock = manualStockStr.isEmpty() ? 0 : Integer.parseInt(manualStockStr);
+            if(manualStock > 0) {
+                variants.add(new ProductVariantEntity("Único", "Estándar", manualStock));
+            } else {
+                Toast.makeText(this, "Cargá al menos un color/cantidad", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         String finalImagePath = "";
@@ -234,18 +252,18 @@ public class AddProductActivity extends AppCompatActivity {
             finalImagePath = saveImageToInternalStorage(selectedImageUri);
         }
 
-        // GUARDAMOS EL PRODUCTO
-        // Usamos el campo de descripción (el último) para guardar el detalle de colores
+        // 2. CREAR EL PRODUCTO PADRE (SIN STOCK, ESO LO TIENEN LOS HIJOS)
         ProductEntity newProduct = new ProductEntity(
-                name, category,
+                name,
+                category,
                 Double.parseDouble(costStr),
                 Double.parseDouble(priceStr),
-                Integer.parseInt(totalStockStr), // Guardamos la SUMA TOTAL como stock
-                finalImagePath,
-                variantsDetail // <--- ACÁ GUARDAMOS EL DETALLE (Negro: 10, Rojo: 5...)
+                finalImagePath
         );
 
-        productViewModel.insert(newProduct);
+        // 3. GUARDAR TODO JUNTO USANDO EL NUEVO MÉTODO DEL VIEWMODEL
+        productViewModel.insert(newProduct, variants);
+
         Toast.makeText(this, "Producto Guardado", Toast.LENGTH_SHORT).show();
         finish();
     }
