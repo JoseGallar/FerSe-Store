@@ -20,15 +20,12 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fersestore.app.data.entity.ProductEntity;
@@ -37,7 +34,7 @@ import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.adapter.ProductAdapter;
 import com.fersestore.app.ui.view.AddProductActivity;
 import com.fersestore.app.ui.view.CalculatorActivity;
-import com.fersestore.app.ui.view.FinancialActivity; // Recuperamos Finanzas
+import com.fersestore.app.ui.view.FinancialActivity;
 import com.fersestore.app.ui.view.ProductDetailActivity;
 import com.fersestore.app.ui.view.WalletActivity;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
@@ -57,20 +54,11 @@ public class MainActivity extends AppCompatActivity {
     private ProductAdapter adapter;
     private TextView tvTodaySales, tvEmpty;
     private List<ProductEntity> fullProductList = new ArrayList<>();
-
-    // Para guardar la preferencia de Modo Oscuro/Claro
     private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Configuración DE LUJO para la Barra
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
-            getSupportActionBar().setCustomView(R.layout.custom_toolbar);
-            getSupportActionBar().setElevation(0); // Quita la sombra para que quede plano
-        }
-
-        // 1. Cargar Tema guardado ANTES de crear la vista
+        // 1. Cargar Tema guardado
         sharedPreferences = getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         boolean isDarkMode = sharedPreferences.getBoolean("DARK_MODE", false);
         if (isDarkMode) {
@@ -83,53 +71,28 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Configurar Toolbar
-        // Configurar Toolbar (Logo Chiquito + Título)
         if (getSupportActionBar() != null) {
-            // 1. Forzar que se vean AMBOS (Logo y Título)
             getSupportActionBar().setDisplayShowHomeEnabled(true);
             getSupportActionBar().setDisplayUseLogoEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(true); // ¡Esto recupera el nombre "FerSe Store"!
-
-            getSupportActionBar().setTitle(" FerSe Store"); // Le dejamos 2 espacios para separarlo del logo
+            getSupportActionBar().setDisplayShowTitleEnabled(true);
+            getSupportActionBar().setTitle(" FerSe Store");
             getSupportActionBar().setElevation(0);
-
-            // 2. Lógica para ACHICAR el logo (para que no se vea gigante)
-            try {
-                // CAMBIÁ "ic_launcher" POR EL NOMBRE DE TU LOGO (ej: R.drawable.mi_logo)
-                Drawable original = ContextCompat.getDrawable(this, R.drawable.logo_ferse);
-
-
-            } catch (Exception e) {
-                // Si falla algo, no pasa nada, no ponemos logo
-                e.printStackTrace();
-            }
-
-            // --- ACCESOS RÁPIDOS ---
-            // 1. Billetera
-            findViewById(R.id.btn_quick_wallet).setOnClickListener(v ->
-                    startActivity(new Intent(MainActivity.this, WalletActivity.class))
-            );
-
-            // 2. Finanzas (Historial)
-            findViewById(R.id.btn_quick_finance).setOnClickListener(v ->
-                    startActivity(new Intent(MainActivity.this, FinancialActivity.class))
-            );
-
-            // 3. Calculadora
-            findViewById(R.id.btn_quick_calc).setOnClickListener(v ->
-                    startActivity(new Intent(MainActivity.this, CalculatorActivity.class))
-            );
-
         }
 
+        // --- ACCESOS RÁPIDOS ---
+        findViewById(R.id.btn_quick_wallet).setOnClickListener(v -> startActivity(new Intent(this, WalletActivity.class)));
+        findViewById(R.id.btn_quick_finance).setOnClickListener(v -> startActivity(new Intent(this, FinancialActivity.class)));
+        findViewById(R.id.btn_quick_calc).setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
 
         // Configurar RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // --- CONEXIÓN CON EL DETALLE ARREGLADA ---
         adapter = new ProductAdapter(new ArrayList<>(), product -> {
             Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
-            intent.putExtra("product_data", product); // <--- ESTO ES LA CLAVE
+            // Mandamos el objeto completo con la llave que espera el detalle
+            intent.putExtra("product_data", product);
             startActivity(intent);
         });
         recyclerView.setAdapter(adapter);
@@ -151,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
 
         transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
 
-        fab.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AddProductActivity.class)));
+        fab.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
     }
 
     private void calculateTodaySales(List<TransactionEntity> transactions) {
@@ -173,10 +136,8 @@ public class MainActivity extends AppCompatActivity {
         tvTodaySales.setText("$ " + String.format("%.2f", todayTotal));
     }
 
-    // --- MENÚ DE LOS 3 PUNTITOS ---
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Buscador (Ese siempre es útil dejarlo)
         MenuItem searchItem = menu.add(Menu.NONE, 0, Menu.NONE, "Buscar");
         searchItem.setIcon(android.R.drawable.ic_menu_search);
         searchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
@@ -189,13 +150,10 @@ public class MainActivity extends AppCompatActivity {
             @Override public boolean onQueryTextChange(String newText) { filterList(newText); return true; }
         });
 
-        // --- SOLO DEJAMOS LO QUE PEDISTE ---
-        menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad"); // ID 4
-
-        // Opción de Tema
+        menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad");
         boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
         String themeTitle = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
-        menu.add(Menu.NONE, 5, Menu.NONE, themeTitle); // ID 5
+        menu.add(Menu.NONE, 5, Menu.NONE, themeTitle);
 
         return true;
     }
@@ -203,37 +161,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
-        if (id == 1) startActivity(new Intent(this, WalletActivity.class));
-        if (id == 2) startActivity(new Intent(this, FinancialActivity.class)); // Abre el historial
-        if (id == 3) startActivity(new Intent(this, CalculatorActivity.class));
         if (id == 4) checkPermissionAndExport();
-
-        if (id == 5) { toggleTheme(); return true; } // Cambiar tema
-
+        if (id == 5) { toggleTheme(); return true; }
         return super.onOptionsItemSelected(item);
     }
 
-    // --- LÓGICA DE CAMBIO DE TEMA CORREGIDA ---
     private void toggleTheme() {
         boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-
         if (isDark) {
-            // Cambiar a Claro
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
             editor.putBoolean("DARK_MODE", false);
-            Toast.makeText(this, "Modo Claro Activado ☀️", Toast.LENGTH_SHORT).show();
         } else {
-            // Cambiar a Oscuro
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
             editor.putBoolean("DARK_MODE", true);
-            Toast.makeText(this, "Modo Oscuro Activado 🌙", Toast.LENGTH_SHORT).show();
         }
         editor.apply();
-
-        // ¡IMPORTANTE! BORRAMOS LA LÍNEA "recreate();"
-        // El AppCompatDelegate ya se encarga de reiniciar la actividad automáticamente.
     }
 
     private void filterList(String text) {
@@ -244,7 +187,6 @@ public class MainActivity extends AppCompatActivity {
         adapter.setProductList(filtered);
     }
 
-    // --- BACKUP ---
     private void checkPermissionAndExport() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -265,22 +207,14 @@ public class MainActivity extends AppCompatActivity {
             FileWriter writer = new FileWriter(file);
             writer.append("ID,Producto,Costo,Venta,Stock\n");
             for (ProductEntity p : fullProductList) {
-                writer.append(p.getId() + "," + p.getName() + "," + p.costPrice + "," + p.getSalePrice() + "," + p.getCurrentStock() + "\n");
+                // Usamos los nombres de variables compatibles con tu ProductEntity
+                writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + p.currentStock + "\n");
             }
             writer.flush();
             writer.close();
             Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();
-            shareFile(file);
         } catch (Exception e) {
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
-
-    private void shareFile(File file) {
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/csv");
-        intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-        startActivity(Intent.createChooser(intent, "Compartir Backup"));
-    }
-
 }
