@@ -487,6 +487,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                 }).show();
     }
 
+    // PASO 2: Lógica de Venta con Cálculo de Ganancia
     private void confirmarVenta(ProductVariantEntity variante) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Vender " + variante.color);
@@ -500,18 +501,39 @@ public class ProductDetailActivity extends AppCompatActivity {
             String cantStr = input.getText().toString();
             if (!cantStr.isEmpty()) {
                 int cantidad = Integer.parseInt(cantStr);
+
+                // Verificamos stock
                 if (cantidad > variante.stock) {
                     Toast.makeText(this, "¡No tenés tanto stock!", Toast.LENGTH_SHORT).show();
                 } else {
+                    // 1. Descontamos el stock
                     variante.stock -= cantidad;
                     productViewModel.updateVariant(variante);
 
-                    double totalVenta = currentPackage.product.salePrice * cantidad;
+                    // 2. HACEMOS LA CUENTA MATEMÁTICA (Aquí está la magia)
+                    double precioVentaUnitario = currentPackage.product.salePrice;
+                    double costoUnitario = currentPackage.product.costPrice;
+
+                    // Calculamos ganancia por unidad y multiplicamos por cantidad
+                    double gananciaTotal = (precioVentaUnitario - costoUnitario) * cantidad;
+                    double totalVenta = precioVentaUnitario * cantidad;
+
+                    // 3. Guardamos la transacción con la GANANCIA CONGELADA
+                    // Fíjate que el cuarto parámetro ahora es 'gananciaTotal'
                     TransactionEntity venta = new TransactionEntity(
-                            TransactionType.INCOME, totalVenta, totalVenta, cantidad, productId,
+                            TransactionType.INCOME,
+                            totalVenta,
+                            totalVenta,
+                            gananciaTotal, // <--- ESTO SE GUARDA PARA SIEMPRE
+                            cantidad,
+                            productId,
                             "Venta: " + currentPackage.product.name + " (" + variante.color + ")",
-                            System.currentTimeMillis(), "", "Cliente", "COMPLETED"
+                            System.currentTimeMillis(),
+                            "",
+                            "Cliente",
+                            "COMPLETED"
                     );
+
                     transactionViewModel.insert(venta);
                     Toast.makeText(this, "💰 Venta Registrada", Toast.LENGTH_SHORT).show();
                 }

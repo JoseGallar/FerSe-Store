@@ -191,15 +191,20 @@
             android:textStyle="bold"
             app:cornerRadius="25dp"/>
 
-        <Button
-            android:id="@+id/btn_volver"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_ver_ganancias"
             android:layout_width="match_parent"
-            android:layout_height="55dp"
-            android:text="Volver"
-            android:textColor="?android:attr/textColorPrimary"
-            android:backgroundTint="#90A4AE"
-            android:layout_marginTop="8dp"
-            app:cornerRadius="25dp"/>
+            android:layout_height="60dp"
+            android:layout_marginTop="16dp"
+            android:text="GANANCIAS"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            app:backgroundTint="#2E7D32"
+            app:cornerRadius="12dp"
+            app:icon="@android:drawable/ic_menu_my_calendar"
+            app:iconGravity="textStart"
+            app:iconTint="#FFFFFF" />
     </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

@@ -1,7 +1,7 @@
 package com.fersestore.app.domain.model;
 
-public enum TransactionType {
-    INCOME,  // Ingreso (Ventas)
-    EXPENSE,  // Egreso (Gastos)
-    INVESTMENT  // Inversión (Tu plata)
+public class TransactionType {
+    // Definimos las constantes como TEXTO simple para evitar errores de comparación
+    public static final String INCOME = "INCOME";
+    public static final String EXPENSE = "EXPENSE";
 }
