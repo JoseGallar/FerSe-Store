@@ -1,6 +1,7 @@
 package com.fersestore.app.data.entity;
 
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 @Entity(tableName = "debts")
@@ -26,6 +27,7 @@ public class DebtEntity {
     public DebtEntity() {}
 
     // Constructor completo
+    @Ignore
     public DebtEntity(String clientName, String productName, String variantInfo, double totalAmount, double paidAmount, int productId, int variantId, int quantity, long timestamp) {
         this.clientName = clientName;
         this.productName = productName;

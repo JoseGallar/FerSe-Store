@@ -8,7 +8,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="1521dp"
+        android:layout_height="match_parent"
         android:background="?android:attr/colorBackground"
         android:orientation="vertical">
 
@@ -37,7 +37,7 @@
                     android:layout_height="30dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_wallet"
-                    app:tint="?attr/colorSecondary"/>
+                    app:tint="?attr/colorSecondary" />
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
@@ -55,9 +55,9 @@
                 <ImageView
                     android:layout_width="30dp"
                     android:layout_height="30dp"
-                    android:src="@drawable/ic_financial"
                     android:layout_gravity="center"
-                    app:tint="?attr/colorSecondary"/>
+                    android:src="@drawable/ic_financial"
+                    app:tint="?attr/colorSecondary" />
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
@@ -75,9 +75,9 @@
                 <ImageView
                     android:layout_width="30dp"
                     android:layout_height="30dp"
-                    android:src="@drawable/ic_calculator"
                     android:layout_gravity="center"
-                    app:tint="?attr/colorSecondary"/>
+                    android:src="@drawable/ic_calculator"
+                    app:tint="?attr/colorSecondary" />
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 

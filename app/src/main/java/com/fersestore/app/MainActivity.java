@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private ProductViewModel productViewModel;
     private TransactionViewModel transactionViewModel;
     private ProductAdapter adapter;
+
     private TextView tvTodaySales, tvEmpty;
 
     // --- LISTAS PARA EL FILTRO ---

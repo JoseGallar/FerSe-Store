@@ -5,8 +5,10 @@ import androidx.room.Entity;
 import androidx.room.ForeignKey;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.Ignore;
 
 import static androidx.room.ForeignKey.CASCADE;
+
 @Entity(
         tableName = "product_variants",
         foreignKeys = @ForeignKey(
@@ -33,7 +35,8 @@ public class ProductVariantEntity {
     // Constructor vacío (Obligatorio para Room)
     public ProductVariantEntity() {}
 
-    // Constructor para nosotros
+    // Constructor para nosotros (Ignorado por Room para evitar el warning)
+    @Ignore
     public ProductVariantEntity(String size, String color, int stock) {
         this.size = size;
         this.color = color;

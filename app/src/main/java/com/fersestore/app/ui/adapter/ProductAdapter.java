@@ -65,9 +65,26 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         DecimalFormat decimalFormat = new DecimalFormat("#,###", symbols);
         holder.tvPrice.setText("$ " + decimalFormat.format(product.salePrice));
 
-        // --- CORRECCIÓN DEL STOCK ---
-        // Usamos el método del paquete que suma los hijos
-        holder.tvStock.setText("Stock: " + item.getTotalStock());
+        // --- LÓGICA DE STOCK (CON ALERTAS DE COLOR) ---
+        int totalStock = item.getTotalStock();
+
+        if (totalStock == 0) {
+            // CASO 1: AGOTADO (Rojo)
+            holder.tvStock.setText("¡AGOTADO!");
+            holder.tvStock.setTextColor(android.graphics.Color.parseColor("#D32F2F")); // Rojo fuerte
+            holder.tvStock.setTypeface(null, android.graphics.Typeface.BOLD); // Negrita
+        } else if (totalStock <= 3) {
+            // CASO 2: STOCK BAJO (Naranja)
+            holder.tvStock.setText("Stock: " + totalStock);
+            holder.tvStock.setTextColor(android.graphics.Color.parseColor("#FF6D00")); // Naranja Alerta
+            holder.tvStock.setTypeface(null, android.graphics.Typeface.BOLD); // Negrita
+        } else {
+            // CASO 3: NORMAL (Gris)
+            holder.tvStock.setText("Stock: " + totalStock);
+            holder.tvStock.setTextColor(android.graphics.Color.parseColor("#757575")); // Gris oscuro estándar
+            holder.tvStock.setTypeface(null, android.graphics.Typeface.NORMAL); // Letra normal
+        }
+        // ----------------------------------------------
 
         // --- CARGAR IMAGEN ---
         holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery);
@@ -85,13 +102,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             }
         }
 
-        // --- CLICK (Ir al detalle) ---
-        holder.itemView.setOnClickListener(v -> {
-            Intent intent = new Intent(v.getContext(), ProductDetailActivity.class);
-            // Pasamos el producto padre (el detalle luego buscará los colores si hace falta)
-            intent.putExtra("product_data", product);
-            v.getContext().startActivity(intent);
-        });
+        // IMPORTANTE: NO OLVIDAR EL LISTENER DE CLICK
+        holder.itemView.setOnClickListener(v -> listener.onItemClick(product));
     }
 
     @Override
