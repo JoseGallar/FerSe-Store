@@ -27,7 +27,6 @@ public class ProductViewModel extends AndroidViewModel {
         return mAllProducts;
     }
 
-    // Esta es la función que llamaremos desde "AddProductActivity"
     public void insert(ProductEntity product, List<ProductVariantEntity> variants) {
         mRepository.insertProductWithVariants(product, variants);
     }
@@ -36,7 +35,6 @@ public class ProductViewModel extends AndroidViewModel {
         mRepository.update(product);
     }
 
-    // Función para actualizar SOLO una variante (ej: restar stock al vender)
     public void updateVariant(ProductVariantEntity variant) {
         mRepository.updateVariant(variant);
     }
@@ -45,12 +43,18 @@ public class ProductViewModel extends AndroidViewModel {
         mRepository.delete(product);
     }
 
-    // Agrega esto antes de la última llave }
-    public LiveData<com.fersestore.app.data.entity.ProductWithVariants> getProductById(int id) {
-        return mRepository.getProductById(id);
+    // --- AQUÍ ESTABA EL PROBLEMA (YA ESTÁ ARREGLADO) ---
+    public void deleteVariant(ProductVariantEntity variant) {
+        mRepository.deleteVariant(variant);
     }
 
+    // El error era aquí: mRepository tiene "insertVariant", no "insertNewVariant"
     public void insertNewVariant(ProductVariantEntity variant) {
-        mRepository.insertVariant(variant);
+        mRepository.insertVariant(variant); // <--- CORREGIDO
+    }
+    // ---------------------------------------------------
+
+    public LiveData<ProductWithVariants> getProductById(int id) {
+        return mRepository.getProductById(id);
     }
 }

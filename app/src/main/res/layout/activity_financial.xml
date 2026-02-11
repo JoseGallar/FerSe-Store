@@ -74,7 +74,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="VENTAS (Hoy)"
+                    android:text="VENTAS"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="#2E7D32"/>
@@ -105,7 +105,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="GASTOS (Hoy)"
+                    android:text="GASTOS"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="#C62828"/>
@@ -139,7 +139,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="BALANCE (Ganancia)"
+                android:text="BALANCE"
                 android:textColor="?android:attr/textColorPrimary"/>
             <TextView
                 android:id="@+id/tv_balance"
@@ -207,16 +207,5 @@
             app:iconTint="#FFFFFF" />
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_share"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@android:drawable/ic_menu_share"
-        app:backgroundTint="#00E676"
-        app:tint="#FFFFFF"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="-16dp"
-        app:layout_constraintBottom_toTopOf="@id/layout_buttons"
-        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

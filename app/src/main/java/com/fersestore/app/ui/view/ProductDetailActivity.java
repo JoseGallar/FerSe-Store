@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -31,7 +33,6 @@ import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.viewmodel.ProductViewModel;
 import com.fersestore.app.ui.viewmodel.TransactionViewModel;
 
-import java.io.File;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
@@ -49,8 +50,8 @@ public class ProductDetailActivity extends AppCompatActivity {
     private ImageView imgDetail;
 
     // Variables para la edición de imagen
-    private Uri nuevaImagenUri = null; // Guardará la foto temporalmente si la cambias
-    private ImageView imgPreviewEnDialogo; // Para mostrar la foto en el dialogo de edición
+    private Uri nuevaImagenUri = null;
+    private ImageView imgPreviewEnDialogo;
 
     // Lanzador para abrir la galería
     private final ActivityResultLauncher<Intent> launcherEditarImagen = registerForActivityResult(
@@ -58,7 +59,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     nuevaImagenUri = result.getData().getData();
-                    // Permisos persistentes para que la foto no desaparezca al reiniciar
                     try {
                         getContentResolver().takePersistableUriPermission(nuevaImagenUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     } catch (Exception e) {
@@ -94,7 +94,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                 currentPackage = productWithVariants;
                 updateUI();
             } else {
-                finish(); // Si es null significa que se borró, cerramos la pantalla
+                finish();
             }
         });
     }
@@ -135,16 +135,12 @@ public class ProductDetailActivity extends AppCompatActivity {
         renderizarListaVariantes();
     }
 
+    // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL (LA "X" ROJA) ---
     private void renderizarListaVariantes() {
         llVariantsContainer.removeAllViews();
 
         int currentNightMode = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
-        int colorTextoSeguro;
-        if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-            colorTextoSeguro = android.graphics.Color.WHITE;
-        } else {
-            colorTextoSeguro = android.graphics.Color.BLACK;
-        }
+        int colorTextoSeguro = (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) ? android.graphics.Color.WHITE : android.graphics.Color.BLACK;
 
         if (currentPackage.variants == null || currentPackage.variants.isEmpty()) {
             TextView emptyMsg = new TextView(this);
@@ -158,36 +154,45 @@ public class ProductDetailActivity extends AppCompatActivity {
         for (ProductVariantEntity v : currentPackage.variants) {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setPadding(10, 20, 10, 20);
+            row.setGravity(Gravity.CENTER_VERTICAL); // Centrar verticalmente
+            row.setPadding(10, 15, 10, 15);
 
+            // 1. TEXTO COLOR
             TextView tvColor = new TextView(this);
             tvColor.setText("🎨 " + v.color);
             tvColor.setTextSize(16);
             tvColor.setTextColor(colorTextoSeguro);
-
-            LinearLayout.LayoutParams paramsColor = new LinearLayout.LayoutParams(
-                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+            LinearLayout.LayoutParams paramsColor = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
             tvColor.setLayoutParams(paramsColor);
 
+            // 2. TEXTO STOCK
             TextView tvQty = new TextView(this);
             tvQty.setTextSize(16);
             tvQty.setTypeface(null, android.graphics.Typeface.BOLD);
-
             if (v.stock == 0) {
                 tvQty.setText("AGOTADO");
                 tvQty.setTextColor(android.graphics.Color.RED);
             } else {
                 tvQty.setText(v.stock + " u.");
-                if (v.stock < 3) {
-                    tvQty.setTextColor(android.graphics.Color.parseColor("#FF9800"));
-                } else {
-                    tvQty.setTextColor(android.graphics.Color.parseColor("#2E7D32"));
-                }
+                tvQty.setTextColor(v.stock < 3 ? android.graphics.Color.parseColor("#FF9800") : android.graphics.Color.parseColor("#2E7D32"));
             }
 
+            // 3. BOTÓN ELIMINAR (LA "X") 🔴
+            ImageButton btnDelete = new ImageButton(this);
+            btnDelete.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+            btnDelete.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            btnDelete.setColorFilter(android.graphics.Color.RED); // Teñimos la X de rojo
+            btnDelete.setPadding(20, 10, 10, 10);
+
+            // Acción al tocar la X
+            btnDelete.setOnClickListener(view -> confirmarEliminarVariante(v));
+
+            // Agregamos todo a la fila
             row.addView(tvColor);
             row.addView(tvQty);
+            row.addView(btnDelete); // Agregamos el botón al final
 
+            // Divisor
             View divider = new View(this);
             divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
             divider.setBackgroundColor(android.graphics.Color.LTGRAY);
@@ -195,6 +200,21 @@ public class ProductDetailActivity extends AppCompatActivity {
             llVariantsContainer.addView(row);
             llVariantsContainer.addView(divider);
         }
+    }
+
+    // --- LÓGICA PARA BORRAR LA VARIANTE ---
+    private void confirmarEliminarVariante(ProductVariantEntity variante) {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Borrar " + variante.color + "?")
+                .setMessage("Se eliminará esta variante y su stock.\n(No afecta a ventas pasadas)")
+                .setPositiveButton("BORRAR", (dialog, which) -> {
+                    // Llamamos al ViewModel para borrar
+                    productViewModel.deleteVariant(variante);
+                    Toast.makeText(this, "Variante eliminada", Toast.LENGTH_SHORT).show();
+                    // La pantalla se actualizará sola gracias al LiveData
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     // ==========================================
@@ -209,7 +229,6 @@ public class ProductDetailActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull android.view.MenuItem item) {
         if (item.getItemId() == R.id.action_manage) {
-            // Mostrar menú emergente
             View menuItemView = findViewById(R.id.action_manage);
             PopupMenu popup = new PopupMenu(this, menuItemView);
             popup.getMenu().add(0, 1, 0, "✏️ Editar Nombre/Foto");
@@ -231,30 +250,24 @@ public class ProductDetailActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // --- LÓGICA DE EDITAR (ADAPTABLE A MODO OSCURO/CLARO) ---
     private void mostrarDialogoEditar() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Editar Producto");
 
         android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
-
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(40, 30, 40, 30);
 
-        // --- 1. DETECTAR COLORES SEGÚN MODO ---
         int currentNightMode = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
         boolean esModoOscuro = (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES);
-
-        // Definimos los colores dinámicos
         int colorTexto = esModoOscuro ? android.graphics.Color.WHITE : android.graphics.Color.BLACK;
-        int colorEtiqueta = esModoOscuro ? android.graphics.Color.parseColor("#B0BEC5") : android.graphics.Color.parseColor("#757575"); // Gris claro vs Gris oscuro
+        int colorEtiqueta = esModoOscuro ? android.graphics.Color.parseColor("#B0BEC5") : android.graphics.Color.parseColor("#757575");
         int colorBorde = esModoOscuro ? android.graphics.Color.WHITE : android.graphics.Color.GRAY;
 
-        // --- 2. SECCIÓN IMAGEN ---
         LinearLayout imageContainer = new LinearLayout(this);
         imageContainer.setOrientation(LinearLayout.VERTICAL);
-        imageContainer.setGravity(android.view.Gravity.CENTER);
+        imageContainer.setGravity(Gravity.CENTER);
         imageContainer.setPadding(0, 0, 0, 30);
 
         imgPreviewEnDialogo = new ImageView(this);
@@ -263,7 +276,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         imgPreviewEnDialogo.setScaleType(ImageView.ScaleType.CENTER_CROP);
         imgPreviewEnDialogo.setBackgroundColor(android.graphics.Color.LTGRAY);
 
-        // Borde redondeado a la foto (Solo Android 5+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             imgPreviewEnDialogo.setClipToOutline(true);
         }
@@ -288,33 +300,28 @@ public class ProductDetailActivity extends AppCompatActivity {
         TextView lblFoto = new TextView(this);
         lblFoto.setText("Tocá la foto para cambiarla");
         lblFoto.setTextSize(12);
-        lblFoto.setTextColor(colorEtiqueta); // Color adaptable
-        lblFoto.setGravity(android.view.Gravity.CENTER);
+        lblFoto.setTextColor(colorEtiqueta);
+        lblFoto.setGravity(Gravity.CENTER);
         lblFoto.setPadding(0, 10, 0, 0);
 
         imageContainer.addView(imgPreviewEnDialogo);
         imageContainer.addView(lblFoto);
         mainLayout.addView(imageContainer);
 
-        // --- 3. SECCIÓN NOMBRE ---
         mainLayout.addView(crearTituloCampo("NOMBRE DEL PRODUCTO", colorEtiqueta));
-
         final EditText inputNombre = new EditText(this);
         inputNombre.setText(currentPackage.product.name);
         inputNombre.setTextColor(colorTexto);
-        // Usamos nuestro borde personalizado en lugar del estilo viejo
         inputNombre.setBackground(crearBordePersonalizado(colorBorde));
-        inputNombre.setPadding(20, 20, 20, 20); // Relleno interno para que el texto no toque el borde
+        inputNombre.setPadding(20, 20, 20, 20);
         mainLayout.addView(inputNombre);
 
         mainLayout.addView(crearEspacio());
 
-        // --- 4. SECCIÓN PRECIOS ---
         LinearLayout preciosLayout = new LinearLayout(this);
         preciosLayout.setOrientation(LinearLayout.HORIZONTAL);
         preciosLayout.setWeightSum(2);
 
-        // COSTO
         LinearLayout colCosto = new LinearLayout(this);
         colCosto.setOrientation(LinearLayout.VERTICAL);
         colCosto.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
@@ -329,7 +336,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         inputCosto.setPadding(20, 20, 20, 20);
         colCosto.addView(inputCosto);
 
-        // VENTA
         LinearLayout colVenta = new LinearLayout(this);
         colVenta.setOrientation(LinearLayout.VERTICAL);
         colVenta.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
@@ -350,19 +356,12 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         mainLayout.addView(crearEspacio());
 
-        // --- 5. SECCIÓN CATEGORÍA ---
         mainLayout.addView(crearTituloCampo("CATEGORÍA", colorEtiqueta));
-
         android.widget.Spinner spinnerCategoria = new android.widget.Spinner(this);
-        // Truco: Forzamos el fondo del spinner para que se vea el borde también
         spinnerCategoria.setBackground(crearBordePersonalizado(colorBorde));
         spinnerCategoria.setPadding(10, 10, 10, 10);
-        // Si el Spinner se ve mal en modo oscuro, necesitaríamos un Custom Adapter,
-        // pero por defecto Android suele adaptarlo bien.
 
         String[] categorias = {"Remeras", "Pantalones", "Buzos", "Accesorios", "Calzado", "Otros"};
-
-        // Adaptador simple (Android gestiona el color del texto del spinner automáticamente)
         android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_dropdown_item, categorias
         );
@@ -413,25 +412,21 @@ public class ProductDetailActivity extends AppCompatActivity {
         builder.show();
     }
 
-    // --- NUEVAS FUNCIONES AUXILIARES VISUALES ---
-
-    // Crea el título chiquito con el color correcto según el modo
     private TextView crearTituloCampo(String texto, int color) {
         TextView tv = new TextView(this);
         tv.setText(texto);
         tv.setTextSize(12);
         tv.setTypeface(null, android.graphics.Typeface.BOLD);
-        tv.setTextColor(color); // Usa el color gris claro u oscuro según corresponda
+        tv.setTextColor(color);
         tv.setPadding(4, 0, 0, 8);
         return tv;
     }
 
-    // Crea un borde "Recuadro" programáticamente (Sin usar imagen vieja)
     private android.graphics.drawable.GradientDrawable crearBordePersonalizado(int colorBorde) {
         android.graphics.drawable.GradientDrawable border = new android.graphics.drawable.GradientDrawable();
-        border.setColor(android.graphics.Color.TRANSPARENT); // Fondo transparente
-        border.setStroke(2, colorBorde); // Borde del color detectado (Gris o Blanco)
-        border.setCornerRadius(12); // Bordes redondeados elegantes
+        border.setColor(android.graphics.Color.TRANSPARENT);
+        border.setStroke(2, colorBorde);
+        border.setCornerRadius(12);
         return border;
     }
 
@@ -441,7 +436,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         return v;
     }
 
-    // --- 2. LÓGICA DE ELIMINAR (SOLO PRODUCTO, NO VENTAS) ---
     private void mostrarDialogoEliminar() {
         new AlertDialog.Builder(this)
                 .setTitle("¿Eliminar Producto?")
@@ -449,7 +443,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                 .setPositiveButton("ELIMINAR DEFINITIVAMENTE", (dialog, which) -> {
                     productViewModel.delete(currentPackage.product);
                     Toast.makeText(this, "Producto eliminado", Toast.LENGTH_SHORT).show();
-                    finish(); // Cierra la pantalla y vuelve atrás
+                    finish();
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
@@ -487,7 +481,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                 }).show();
     }
 
-    // PASO 2: Lógica de Venta con Cálculo de Ganancia
     private void confirmarVenta(ProductVariantEntity variante) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Vender " + variante.color);
@@ -502,29 +495,22 @@ public class ProductDetailActivity extends AppCompatActivity {
             if (!cantStr.isEmpty()) {
                 int cantidad = Integer.parseInt(cantStr);
 
-                // Verificamos stock
                 if (cantidad > variante.stock) {
                     Toast.makeText(this, "¡No tenés tanto stock!", Toast.LENGTH_SHORT).show();
                 } else {
-                    // 1. Descontamos el stock
                     variante.stock -= cantidad;
                     productViewModel.updateVariant(variante);
 
-                    // 2. HACEMOS LA CUENTA MATEMÁTICA (Aquí está la magia)
                     double precioVentaUnitario = currentPackage.product.salePrice;
                     double costoUnitario = currentPackage.product.costPrice;
-
-                    // Calculamos ganancia por unidad y multiplicamos por cantidad
                     double gananciaTotal = (precioVentaUnitario - costoUnitario) * cantidad;
                     double totalVenta = precioVentaUnitario * cantidad;
 
-                    // 3. Guardamos la transacción con la GANANCIA CONGELADA
-                    // Fíjate que el cuarto parámetro ahora es 'gananciaTotal'
                     TransactionEntity venta = new TransactionEntity(
                             TransactionType.INCOME,
                             totalVenta,
                             totalVenta,
-                            gananciaTotal, // <--- ESTO SE GUARDA PARA SIEMPRE
+                            gananciaTotal,
                             cantidad,
                             productId,
                             "Venta: " + currentPackage.product.name + " (" + variante.color + ")",

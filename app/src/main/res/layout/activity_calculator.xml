@@ -15,32 +15,60 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="8dp"
-            app:cardBackgroundColor="#263238"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:background="#E3F2FD"> <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="COSTOS EXTRAS (Envío, Bolsas)"
+                android:textColor="#1565C0"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:letterSpacing="0.05"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$"
+                        android:textSize="24sp"
+                        android:textColor="#0D47A1"
+                        android:textStyle="bold"/>
+
+                    <EditText
+                        android:id="@+id/et_shipping_cost"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="0"
+                        android:inputType="numberDecimal"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="#0D47A1"
+                        android:textColorHint="#90CAF9"
+                        android:background="@null"
+                        android:layout_marginStart="8dp"/>
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="COSTOS EXTRAS (Envío, Bolsas)"
-                    android:textColor="#B0BEC5"
-                    android:textStyle="bold"/>
+                    android:text="Se repartirá entre todos los productos"
+                    android:textSize="12sp"
+                    android:textColor="#1976D2"
+                    android:layout_marginTop="4dp"/>
 
-                <EditText
-                    android:id="@+id/et_shipping_cost"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:hint="$ 0"
-                    android:textColor="#FFFFFF"
-                    android:textSize="24sp"
-                    android:inputType="numberDecimal"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

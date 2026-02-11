@@ -14,7 +14,6 @@ import java.util.List;
 public class ProductRepository {
 
     private ProductDao productDao;
-    // OJO: Ahora la lista es de "ProductWithVariants" (Padre + Hijos)
     private LiveData<List<ProductWithVariants>> allProducts;
 
     public ProductRepository(Application application) {
@@ -27,19 +26,13 @@ public class ProductRepository {
         return allProducts;
     }
 
-    // --- LA NUEVA FUNCIÓN DE INSERTAR ---
-    // Recibe al Padre y una lista de sus Hijos
+    // Insertar producto con sus variantes (Padre + Hijos)
     public void insertProductWithVariants(ProductEntity product, List<ProductVariantEntity> variants) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            // 1. Insertamos el Padre y obtenemos su nuevo ID (ej: 50)
             long newId = productDao.insertProduct(product);
-
-            // 2. Le asignamos ese ID a todos los hijos
             for (ProductVariantEntity variant : variants) {
                 variant.productId = (int) newId;
             }
-
-            // 3. Insertamos los hijos
             productDao.insertVariants(variants);
         });
     }
@@ -48,20 +41,25 @@ public class ProductRepository {
         AppDatabase.databaseWriteExecutor.execute(() -> productDao.updateProduct(product));
     }
 
-    // Función para actualizar stock cuando vendes (solo tocas al hijo)
     public void updateVariant(ProductVariantEntity variant) {
         AppDatabase.databaseWriteExecutor.execute(() -> productDao.updateVariant(variant));
     }
 
+    // Borrar producto entero (Padre)
     public void delete(ProductEntity product) {
         AppDatabase.databaseWriteExecutor.execute(() -> productDao.deleteProduct(product));
     }
 
-    // Agrega esto antes de la última llave }
-    public LiveData<com.fersestore.app.data.entity.ProductWithVariants> getProductById(int id) {
+    // Borrar solo una variante (Hijo) - PARA LA "X" ROJA 🔴
+    public void deleteVariant(ProductVariantEntity variant) {
+        AppDatabase.databaseWriteExecutor.execute(() -> productDao.deleteVariant(variant));
+    }
+
+    public LiveData<ProductWithVariants> getProductById(int id) {
         return productDao.getProductById(id);
     }
 
+    // Insertar solo una variante nueva - PARA EL BOTÓN "AGREGAR COLOR"
     public void insertVariant(ProductVariantEntity variant) {
         AppDatabase.databaseWriteExecutor.execute(() -> productDao.insertVariant(variant));
     }

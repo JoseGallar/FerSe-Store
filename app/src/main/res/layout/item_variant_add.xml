@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="4dp">
+
+    <EditText
+        android:id="@+id/et_variant_color"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:hint="Color / Talle"
+        android:textSize="14sp"
+        android:inputType="textCapWords"/>
+
+    <EditText
+        android:id="@+id/et_variant_stock"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:hint="Cant."
+        android:textSize="14sp"
+        android:inputType="number"
+        android:layout_marginHorizontal="8dp"/>
+
+    <ImageButton
+        android:id="@+id/btn_remove_variant"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:tint="#D32F2F"
+        android:contentDescription="Quitar fila" />
+
+</LinearLayout>

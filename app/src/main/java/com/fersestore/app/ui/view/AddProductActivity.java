@@ -55,7 +55,8 @@ public class AddProductActivity extends AppCompatActivity {
     // Variables para el sistema de stock
     private LinearLayout llVariantsContainer;
     private TextView tvTotalStock;
-    private List<View> variantRows = new ArrayList<>(); // Para guardar referencia de las filas
+    // Guardamos la referencia de las filas para poder calcular el total
+    private List<View> variantRows = new ArrayList<>();
 
     private final ActivityResultLauncher<Intent> galleryLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -109,26 +110,39 @@ public class AddProductActivity extends AppCompatActivity {
         btnAddVariant.setOnClickListener(v -> addVariantRow("", false));
 
         // --- INICIALIZAR COLORES COMUNES ---
+        // Ahora estos también tendrán la X por si no los quieres
         addVariantRow("Negro", true);
         addVariantRow("Rojo", true);
         addVariantRow("Amarillo", true);
         addVariantRow("Verde", true);
     }
 
-    // Método para agregar una fila de color
+    // --- AQUÍ ESTÁ EL CAMBIO DE LA "X" 🔴 ---
     private void addVariantRow(String colorName, boolean isFixed) {
-        View rowView = getLayoutInflater().inflate(R.layout.item_stock_variant, llVariantsContainer, false);
+        // Usamos el layout 'item_variant_add' que tiene la X roja
+        // (Asegúrate de haber creado el archivo XML en el paso anterior)
+        View rowView = getLayoutInflater().inflate(R.layout.item_variant_add, llVariantsContainer, false);
 
-        EditText etColor = rowView.findViewById(R.id.et_variant_name);
-        EditText etQty = rowView.findViewById(R.id.et_variant_qty);
+        // IDs del archivo item_variant_add.xml
+        EditText etColor = rowView.findViewById(R.id.et_variant_color);
+        EditText etQty = rowView.findViewById(R.id.et_variant_stock);
+        View btnDelete = rowView.findViewById(R.id.btn_remove_variant); // La X Roja
 
-        if (isFixed) {
+        // Configuramos el texto
+        if (isFixed && !colorName.isEmpty()) {
             etColor.setText(colorName);
-            // etColor.setEnabled(false); // Descomentar si querés que NO se pueda cambiar el nombre "Negro"
         } else {
             etColor.setHint("Ej: Arcoiris");
             etColor.requestFocus();
         }
+
+        // --- LÓGICA DE ELIMINAR FILA ---
+        btnDelete.setOnClickListener(v -> {
+            llVariantsContainer.removeView(rowView); // Lo saca de la pantalla
+            variantRows.remove(rowView);             // Lo saca de la lista de memoria
+            calculateTotal();                        // Recalcula el stock total
+        });
+        // -------------------------------
 
         // Listener para sumar automáticamente cuando escribís
         etQty.addTextChangedListener(new TextWatcher() {
@@ -145,7 +159,8 @@ public class AddProductActivity extends AppCompatActivity {
     private void calculateTotal() {
         int total = 0;
         for (View row : variantRows) {
-            EditText etQty = row.findViewById(R.id.et_variant_qty);
+            // Usamos el ID correcto del XML item_variant_add
+            EditText etQty = row.findViewById(R.id.et_variant_stock);
             String qtyStr = etQty.getText().toString();
             if (!qtyStr.isEmpty()) {
                 try {
@@ -217,8 +232,9 @@ public class AddProductActivity extends AppCompatActivity {
         int totalCalculatedStock = 0;
 
         for (View row : variantRows) {
-            EditText etColor = row.findViewById(R.id.et_variant_name);
-            EditText etQty = row.findViewById(R.id.et_variant_qty);
+            // Usamos los IDs del nuevo XML con la X
+            EditText etColor = row.findViewById(R.id.et_variant_color);
+            EditText etQty = row.findViewById(R.id.et_variant_stock);
 
             String colorName = etColor.getText().toString().trim();
             String qtyStr = etQty.getText().toString().trim();
@@ -226,8 +242,6 @@ public class AddProductActivity extends AppCompatActivity {
             if (!colorName.isEmpty() && !qtyStr.isEmpty()) {
                 int qty = Integer.parseInt(qtyStr);
                 if (qty > 0) {
-                    // Creamos el objeto variante real
-                    // (Size lo dejamos vacío por ahora o podés poner "Único")
                     variants.add(new ProductVariantEntity("Único", colorName, qty));
                     totalCalculatedStock += qty;
                 }
@@ -236,7 +250,6 @@ public class AddProductActivity extends AppCompatActivity {
 
         // Si no cargó ninguna variante, obligamos a crear al menos una "Estándar"
         if (variants.isEmpty()) {
-            // Si el usuario puso stock total manual pero no variantes, creamos una variante genérica
             String manualStockStr = tvTotalStock.getText().toString();
             int manualStock = manualStockStr.isEmpty() ? 0 : Integer.parseInt(manualStockStr);
             if(manualStock > 0) {
@@ -252,7 +265,7 @@ public class AddProductActivity extends AppCompatActivity {
             finalImagePath = saveImageToInternalStorage(selectedImageUri);
         }
 
-        // 2. CREAR EL PRODUCTO PADRE (SIN STOCK, ESO LO TIENEN LOS HIJOS)
+        // 2. CREAR EL PRODUCTO PADRE
         ProductEntity newProduct = new ProductEntity(
                 name,
                 category,
@@ -261,7 +274,7 @@ public class AddProductActivity extends AppCompatActivity {
                 finalImagePath
         );
 
-        // 3. GUARDAR TODO JUNTO USANDO EL NUEVO MÉTODO DEL VIEWMODEL
+        // 3. GUARDAR TODO JUNTO
         productViewModel.insert(newProduct, variants);
 
         Toast.makeText(this, "Producto Guardado", Toast.LENGTH_SHORT).show();

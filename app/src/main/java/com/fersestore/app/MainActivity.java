@@ -50,8 +50,15 @@ public class MainActivity extends AppCompatActivity {
     private ProductAdapter adapter;
     private TextView tvTodaySales, tvEmpty;
 
-    // CORREGIDO: La lista maestra maneja "Paquetes" (Padre + Hijos)
+    // --- NUEVO: LISTAS PARA EL FILTRO ---
+    // "fullProductList" es la copia maestra de la base de datos
     private List<ProductWithVariants> fullProductList = new ArrayList<>();
+    // "filteredList" es lo que realmente se ve en pantalla
+    private List<ProductWithVariants> filteredList = new ArrayList<>();
+
+    // Guardamos qué categoría está seleccionada (Por defecto "Todos")
+    private String currentCategory = "Todos";
+    // ------------------------------------
 
     private SharedPreferences sharedPreferences;
 
@@ -83,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_quick_finance).setOnClickListener(v -> startActivity(new Intent(this, FinancialActivity.class)));
         findViewById(R.id.btn_quick_calc).setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
 
+        // --- NUEVO: BOTONES DE CATEGORÍA ---
+        setupCategoryButtons();
+        // -----------------------------------
+
         // Configurar RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -108,17 +119,88 @@ public class MainActivity extends AppCompatActivity {
 
         // 1. Productos: Actualizamos la lista cuando la base de datos cambie
         productViewModel.getAllProducts().observe(this, products -> {
+            // Guardamos la copia maestra
             fullProductList = products;
-            adapter.setProductList(products);
-            tvEmpty.setVisibility(products.isEmpty() ? View.VISIBLE : View.GONE);
+
+            // Aplicamos el filtro activo (si estaba en "Todos", muestra todo)
+            filterByCategory(currentCategory);
         });
 
         // 2. Transacciones: Calculamos lo vendido hoy
-        transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
+        transactionViewModel.getHistory().observe(this, this::calculateTodaySales); // Usar referencia a método
 
         // Botón agregar
         fab.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
     }
+
+    // --- NUEVO: LÓGICA DE BOTONES DE CATEGORÍA ---
+    private void setupCategoryButtons() {
+        // Botón TODOS
+        findViewById(R.id.btn_cat_todos).setOnClickListener(v -> {
+            filterByCategory("Todos");
+            actualizarColoresBotones(R.id.btn_cat_todos);
+        });
+
+        // Botón REMERAS
+        findViewById(R.id.btn_cat_remeras).setOnClickListener(v -> {
+            filterByCategory("Remeras");
+            actualizarColoresBotones(R.id.btn_cat_remeras);
+        });
+
+        // Botón PANTALONES
+        findViewById(R.id.btn_cat_pantalones).setOnClickListener(v -> {
+            filterByCategory("Pantalones");
+            actualizarColoresBotones(R.id.btn_cat_pantalones);
+        });
+
+        // Botón ACCESORIOS
+        findViewById(R.id.btn_cat_accesorios).setOnClickListener(v -> {
+            filterByCategory("Accesorios");
+            actualizarColoresBotones(R.id.btn_cat_accesorios);
+        });
+
+        // Botón ABRIGOS
+        findViewById(R.id.btn_cat_abrigos).setOnClickListener(v -> {
+            filterByCategory("Abrigos");
+            actualizarColoresBotones(R.id.btn_cat_abrigos);
+        });
+
+        // Botón OTROS
+        findViewById(R.id.btn_cat_otros).setOnClickListener(v -> {
+            filterByCategory("Otros");
+            actualizarColoresBotones(R.id.btn_cat_otros);
+        });
+    }
+
+    private void filterByCategory(String category) {
+        currentCategory = category;
+        filteredList.clear();
+
+        if (category.equalsIgnoreCase("Todos")) {
+            // Si es "Todos", copiamos toda la lista maestra
+            filteredList.addAll(fullProductList);
+        } else {
+            // Si es específico, buscamos uno por uno
+            for (ProductWithVariants item : fullProductList) {
+                // Verificamos null para evitar crashes
+                if (item.product.category != null && item.product.category.equalsIgnoreCase(category)) {
+                    filteredList.add(item);
+                }
+            }
+        }
+
+        // Actualizamos el adaptador con la lista filtrada
+        adapter.setProductList(filteredList);
+
+        // Mostramos mensaje de vacío si corresponde
+        tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
+        if (filteredList.isEmpty()) {
+            tvEmpty.setText("No hay productos en " + category);
+        } else {
+            tvEmpty.setText("No hay productos cargados"); // Texto por defecto
+        }
+    }
+    // ---------------------------------------------
 
     private void calculateTodaySales(List<TransactionEntity> transactions) {
         double todayTotal = 0;
@@ -139,7 +221,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-        // CORREGIDO: Formato sin decimales (%.0f)
         tvTodaySales.setText("$ " + String.format("%.0f", todayTotal));
     }
 
@@ -155,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
         searchView.setQueryHint("Buscar ropa...");
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override public boolean onQueryTextSubmit(String query) { return false; }
-            @Override public boolean onQueryTextChange(String newText) { filterList(newText); return true; }
+            @Override public boolean onQueryTextChange(String newText) { filterListByName(newText); return true; }
         });
 
         // Menús Extras
@@ -187,21 +268,21 @@ public class MainActivity extends AppCompatActivity {
             editor.putBoolean("DARK_MODE", true);
         }
         editor.apply();
-        // No hace falta recreate(), el cambio de modo noche lo hace solo a veces,
-        // pero por seguridad podríamos forzarlo si no refresca.
     }
 
-    // --- CORREGIDO: FILTRADO CON LA NUEVA ESTRUCTURA ---
-    private void filterList(String text) {
-        List<ProductWithVariants> filtered = new ArrayList<>();
+    // --- CORREGIDO: BUSCADOR POR NOMBRE ---
+    // Este filtro trabaja SOBRE la categoría actual (Filtro doble)
+    private void filterListByName(String text) {
+        List<ProductWithVariants> searchResults = new ArrayList<>();
 
-        for (ProductWithVariants item : fullProductList) {
-            // Buscamos dentro del objeto "product" del paquete
+        // Buscamos dentro de la lista YA FILTRADA por categoría
+        // Así si estás en "Remeras" y buscas "Azul", solo busca en remeras
+        for (ProductWithVariants item : filteredList) {
             if (item.product.getName().toLowerCase().contains(text.toLowerCase())) {
-                filtered.add(item);
+                searchResults.add(item);
             }
         }
-        adapter.setProductList(filtered);
+        adapter.setProductList(searchResults);
     }
 
     private void checkPermissionAndExport() {
@@ -216,7 +297,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // --- CORREGIDO: EXPORTAR CSV CON STOCK CALCULADO ---
     private void exportToCSV() {
         try {
             File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
@@ -228,7 +308,6 @@ public class MainActivity extends AppCompatActivity {
 
             for (ProductWithVariants item : fullProductList) {
                 ProductEntity p = item.product;
-                // Usamos item.getTotalStock() en vez de p.currentStock
                 writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + item.getTotalStock() + "\n");
             }
 
@@ -237,6 +316,40 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // --- MÉTODO PARA PINTAR LOS BOTONES ---
+    private void actualizarColoresBotones(int idBotonActivo) {
+        // Lista de todos los IDs de tus botones
+        int[] idsBotones = {
+                R.id.btn_cat_todos,
+                R.id.btn_cat_remeras,
+                R.id.btn_cat_pantalones,
+                R.id.btn_cat_abrigos,
+                R.id.btn_cat_accesorios,
+                R.id.btn_cat_otros
+        };
+
+        // Colores (Los mismos de tu diseño)
+        int colorActivo = android.graphics.Color.parseColor("#546E7A"); // Azul Oscuro
+        int colorInactivo = android.graphics.Color.parseColor("#CFD8DC"); // Gris Claro
+        int textoBlanco = android.graphics.Color.WHITE;
+        int textoGris = android.graphics.Color.parseColor("#455A64");
+
+        for (int id : idsBotones) {
+            android.widget.Button btn = findViewById(id);
+            if (btn != null) {
+                if (id == idBotonActivo) {
+                    // SI ES EL ELEGIDO: Lo pintamos Azul
+                    btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorActivo));
+                    btn.setTextColor(textoBlanco);
+                } else {
+                    // SI NO: Lo pintamos Gris
+                    btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorInactivo));
+                    btn.setTextColor(textoGris);
+                }
+            }
         }
     }
 }

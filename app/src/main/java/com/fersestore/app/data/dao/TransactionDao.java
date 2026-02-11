@@ -20,6 +20,7 @@ public interface TransactionDao {
     @Update
     void update(TransactionEntity transaction);
 
+
     @Delete
     void delete(TransactionEntity transaction);
 

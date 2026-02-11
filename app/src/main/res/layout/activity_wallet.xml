@@ -1,189 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:background="?android:attr/colorBackground">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="20dp"
-                android:orientation="vertical"
-                android:background="#FFF3E0"> <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="INVERSIÓN INICIAL"
-                android:textColor="#EF6C00"
-                android:textStyle="bold"
-                android:letterSpacing="0.1"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="$"
-                        android:textSize="24sp"
-                        android:textColor="#E65100"/>
-
-                    <EditText
-                        android:id="@+id/et_initial_investment"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="0"
-                        android:inputType="numberDecimal"
-                        android:textSize="32sp"
-                        android:textStyle="bold"
-                        android:textColor="#E65100"
-                        android:background="@null"/>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tocá el número para editar tu capital inicial"
-                    android:textSize="12sp"
-                    android:textColor="#FF9800"/>
-
-                <Button
-                    android:id="@+id/btn_save_investment"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Guardar Inversión"
-                    android:layout_gravity="end"
-                    android:backgroundTint="#EF6C00"
-                    android:layout_marginTop="8dp"/>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="20dp"
-                android:orientation="vertical"
-                android:background="#E8F5E9"> <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="DINERO DISPONIBLE (CAJA)"
-                android:textColor="#2E7D32"
-                android:textStyle="bold"
-                android:letterSpacing="0.1"/>
-
-                <TextView
-                    android:id="@+id/tv_current_cash"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="$ 0.00"
-                    android:textSize="40sp"
-                    android:textStyle="bold"
-                    android:textColor="#1B5E20"
-                    android:layout_marginTop="8dp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="(Inversión + Ventas Cobradas - Gastos)"
-                    android:textSize="12sp"
-                    android:textColor="#4CAF50"/>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
-                android:layout_marginEnd="8dp">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="16dp">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
+                    android:padding="20dp"
                     android:orientation="vertical"
-                    android:background="#FFEBEE"> <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ME DEBEN"
-                    android:textColor="#C62828"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
+                    android:background="#FFF3E0">
+
                     <TextView
-                        android:id="@+id/tv_money_on_street"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="$ 0"
-                        android:textSize="20sp"
+                        android:text="TOTAL INVERTIDO"
+                        android:textColor="#EF6C00"
                         android:textStyle="bold"
-                        android:textColor="#B71C1C"/>
+                        android:letterSpacing="0.1"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$"
+                            android:textSize="24sp"
+                            android:textColor="#E65100"/>
+
+                        <TextView
+                            android:id="@+id/tv_total_inversion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="32sp"
+                            android:textStyle="bold"
+                            android:textColor="#E65100"
+                            android:layout_marginStart="8dp"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Capital total inyectado al negocio"
+                        android:textSize="12sp"
+                        android:textColor="#FF9800"/>
+
+                    <Button
+                        android:id="@+id/btn_add_investment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ INGRESAR DINERO"
+                        android:layout_gravity="end"
+                        android:backgroundTint="#EF6C00"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginTop="8dp"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
-                android:layout_marginStart="8dp">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="16dp">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
+                    android:padding="20dp"
                     android:orientation="vertical"
-                    android:background="#E3F2FD"> <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="EN MERCADERÍA"
-                    android:textColor="#1565C0"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
+                    android:background="#E8F5E9">
                     <TextView
-                        android:id="@+id/tv_stock_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="$ 0"
-                        android:textSize="20sp"
+                        android:text="DINERO DISPONIBLE (CAJA)"
+                        android:textColor="#2E7D32"
                         android:textStyle="bold"
-                        android:textColor="#0D47A1"/>
+                        android:letterSpacing="0.1"/>
+
+                    <TextView
+                        android:id="@+id/tv_current_cash"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="$ 0"
+                        android:textSize="40sp"
+                        android:textStyle="bold"
+                        android:textColor="#1B5E20"
+                        android:layout_marginTop="8dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="(Inversión + Ventas - Gastos)"
+                        android:textSize="12sp"
+                        android:textColor="#4CAF50"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    android:layout_marginEnd="8dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:orientation="vertical"
+                        android:background="#FFEBEE">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ME DEBEN"
+                            android:textColor="#C62828"
+                            android:textStyle="bold"
+                            android:textSize="12sp"/>
+                        <TextView
+                            android:id="@+id/tv_money_on_street"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$ 0"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="#B71C1C"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    android:layout_marginStart="8dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:orientation="vertical"
+                        android:background="#E3F2FD">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="EN MERCADERÍA"
+                            android:textColor="#1565C0"
+                            android:textStyle="bold"
+                            android:textSize="12sp"/>
+                        <TextView
+                            android:id="@+id/tv_stock_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$ 0"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="#0D47A1"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="20dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="HISTORIAL DE MOVIMIENTOS"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
+
+                <Button
+                    android:id="@+id/btn_filter_today"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Hoy"
+                    android:backgroundTint="#546E7A"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btn_filter_month"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Mes"
+                    android:backgroundTint="#CFD8DC"
+                    android:textColor="#546E7A"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btn_filter_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Todo"
+                    android:backgroundTint="#CFD8DC"
+                    android:textColor="#546E7A"/>
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_transactions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
         </LinearLayout>
+    </ScrollView>
 
-        <Button
-            android:id="@+id/btn_record_expense"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="REGISTRAR GASTO / COMPRA ROPA"
-            android:backgroundTint="#546E7A"
-            android:layout_marginTop="24dp"/>
+    <Button
+        android:id="@+id/btn_record_expense"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="REGISTRAR GASTO / SALIDA"
+        android:backgroundTint="#546E7A"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_margin="16dp"/>
 
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>

@@ -7,6 +7,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -54,34 +55,66 @@ public class CalculatorActivity extends AppCompatActivity {
     private void addItemRow() {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setWeightSum(3);
+        row.setGravity(Gravity.CENTER_VERTICAL); // Centrar elementos verticalmente
         row.setPadding(0, 0, 0, 16);
 
-        // Nombre (Ej: Vestidos)
+        // 1. Nombre (Ej: Vestidos)
         EditText etName = new EditText(this);
-        etName.setHint("Prod (Ej: Vestidos)");
-        etName.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.2f));
+        etName.setHint("Producto");
+        // Ajustamos pesos para dar espacio al botón X
+        LinearLayout.LayoutParams paramsName = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        etName.setLayoutParams(paramsName);
 
-        // Cantidad (Ej: 3)
+        // 2. Cantidad (Ej: 3)
         EditText etQty = new EditText(this);
         etQty.setHint("Cant");
         etQty.setInputType(InputType.TYPE_CLASS_NUMBER);
-        etQty.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 0.6f));
+        LinearLayout.LayoutParams paramsQty = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.5f);
+        etQty.setLayoutParams(paramsQty);
         etQty.setGravity(Gravity.CENTER);
 
-        // Costo Total del Lote (Ej: $30.000)
+        // 3. Costo Total del Lote (Ej: $30.000)
         EditText etCost = new EditText(this);
-        etCost.setHint("$ Total Lote");
+        etCost.setHint("$ Total");
         etCost.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        etCost.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.2f));
+        LinearLayout.LayoutParams paramsCost = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        etCost.setLayoutParams(paramsCost);
         etCost.setGravity(Gravity.CENTER);
 
+        // 4. LA "X" ROJA (Creada programáticamente) 🔴
+        ImageButton btnDelete = new ImageButton(this);
+        btnDelete.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+        btnDelete.setBackgroundColor(Color.TRANSPARENT);
+        btnDelete.setColorFilter(Color.RED); // Pintamos la X de rojo
+
+        // Tamaño fijo para el botón
+        LinearLayout.LayoutParams paramsBtn = new LinearLayout.LayoutParams(80, 80);
+        btnDelete.setLayoutParams(paramsBtn);
+        btnDelete.setPadding(10, 0, 0, 0);
+
+        // Agregamos todo a la fila visual
         row.addView(etName);
         row.addView(etQty);
         row.addView(etCost);
+        row.addView(btnDelete);
 
+        // Creamos el objeto de datos
+        final ItemRow newItemData = new ItemRow(etName, etQty, etCost, row);
+
+        // --- LÓGICA DE BORRADO ---
+        btnDelete.setOnClickListener(v -> {
+            // 1. Borramos de la pantalla
+            containerItems.removeView(row);
+            // 2. Borramos de la lista de memoria (para que no falle el cálculo)
+            itemRows.remove(newItemData);
+        });
+
+        // Agregamos a la pantalla y a la lista
         containerItems.addView(row);
-        itemRows.add(new ItemRow(etName, etQty, etCost, row));
+        itemRows.add(newItemData);
+
+        // Foco en el nombre para escribir rápido
+        etName.requestFocus();
     }
 
     private void calculate() {
@@ -114,35 +147,41 @@ public class CalculatorActivity extends AppCompatActivity {
         resultBuilder.append("----------------------------\n");
 
         for (ItemRow row : itemRows) {
-            String name = row.etName.getText().toString().trim();
+            String nameRaw = row.etName.getText().toString().trim();
             String qtyStr = row.etQty.getText().toString().trim();
             String costStr = row.etTotalCost.getText().toString().trim();
 
-            if (!name.isEmpty() && !qtyStr.isEmpty() && !costStr.isEmpty()) {
+            // CAMBIO: Si no pusiste nombre, usamos uno genérico
+            String name = nameRaw.isEmpty() ? "Producto (Sin nombre)" : nameRaw;
+
+            // CAMBIO: Ahora solo validamos que haya CANTIDAD y COSTO para hacer la cuenta
+            if (!qtyStr.isEmpty() && !costStr.isEmpty()) {
                 double itemSubtotal = Double.parseDouble(costStr); // Ej: $30.000 (Vestidos)
                 int quantity = Integer.parseInt(qtyStr);           // Ej: 3
 
-                // TU FÓRMULA MAESTRA:
-                // Factor de participación: (Subtotal Item / Total Factura)
-                double participationFactor = itemSubtotal / totalMerchandiseCost;
+                if (quantity > 0) { // Evitar división por cero
+                    // TU FÓRMULA MAESTRA:
+                    // Factor de participación: (Subtotal Item / Total Factura)
+                    double participationFactor = itemSubtotal / totalMerchandiseCost;
 
-                // Cuánto envío le toca a este grupo: (Factor * Total Envío)
-                double allocatedShipping = participationFactor * shipping;
+                    // Cuánto envío le toca a este grupo: (Factor * Total Envío)
+                    double allocatedShipping = participationFactor * shipping;
 
-                // Costo REAL del grupo: (Subtotal + Envío asignado)
-                double realGroupCost = itemSubtotal + allocatedShipping;
+                    // Costo REAL del grupo: (Subtotal + Envío asignado)
+                    double realGroupCost = itemSubtotal + allocatedShipping;
 
-                // Costo UNITARIO Real: (Costo Real Grupo / Cantidad)
-                double unitRealCost = realGroupCost / quantity;
+                    // Costo UNITARIO Real: (Costo Real Grupo / Cantidad)
+                    double unitRealCost = realGroupCost / quantity;
 
-                // Precio de VENTA SUGERIDO (+50%)
-                double sellingPrice = unitRealCost * (1 + (profitPercent / 100));
+                    // Precio de VENTA SUGERIDO (+50%)
+                    double sellingPrice = unitRealCost * (1 + (profitPercent / 100));
 
-                resultBuilder.append("🔹 ").append(name).append(" (x").append(quantity).append(")\n");
-                resultBuilder.append("   Costo Original: $ ").append(String.format("%.2f", itemSubtotal/quantity)).append(" c/u\n");
-                resultBuilder.append("   + Envío asignado: $ ").append(String.format("%.2f", allocatedShipping/quantity)).append(" c/u\n");
-                resultBuilder.append("   ✅ COSTO REAL: $ ").append(String.format("%.2f", unitRealCost)).append(" c/u\n");
-                resultBuilder.append("   💰 VENDER A: $ ").append(String.format("%.2f", sellingPrice)).append("\n\n");
+                    resultBuilder.append("🔹 ").append(name).append(" (x").append(quantity).append(")\n");
+                    resultBuilder.append("   Costo Original: $ ").append(String.format("%.2f", itemSubtotal / quantity)).append(" c/u\n");
+                    resultBuilder.append("   + Envío asignado: $ ").append(String.format("%.2f", allocatedShipping / quantity)).append(" c/u\n");
+                    resultBuilder.append("   ✅ COSTO REAL: $ ").append(String.format("%.2f", unitRealCost)).append(" c/u\n");
+                    resultBuilder.append("   💰 VENDER A: $ ").append(String.format("%.2f", sellingPrice)).append("\n\n");
+                }
             }
         }
 

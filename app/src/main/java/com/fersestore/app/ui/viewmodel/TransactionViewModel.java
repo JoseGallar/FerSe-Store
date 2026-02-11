@@ -25,20 +25,20 @@ public class TransactionViewModel extends AndroidViewModel {
         repository.insert(transaction);
     }
 
+    // --- ESTE ES EL MÉTODO PARA BORRAR (Solo debe estar una vez) ---
     public void delete(TransactionEntity transaction) {
         repository.delete(transaction);
     }
+    // -------------------------------------------------------------
 
     public LiveData<List<TransactionEntity>> getHistory() {
         return allTransactions;
     }
 
-    // CORREGIDO: Antes era getTotalSales, ahora es getTotalIncome
     public LiveData<Double> getTotalIncome() {
         return repository.getTotalIncome();
     }
 
-    // NUEVO: Agregamos gastos también
     public LiveData<Double> getTotalExpenses() {
         return repository.getTotalExpenses();
     }
