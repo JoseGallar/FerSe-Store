@@ -20,6 +20,7 @@ import android.os.Environment;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,21 +51,24 @@ public class MainActivity extends AppCompatActivity {
     private ProductAdapter adapter;
     private TextView tvTodaySales, tvEmpty;
 
-    // --- NUEVO: LISTAS PARA EL FILTRO ---
-    // "fullProductList" es la copia maestra de la base de datos
+    // --- LISTAS PARA EL FILTRO ---
     private List<ProductWithVariants> fullProductList = new ArrayList<>();
-    // "filteredList" es lo que realmente se ve en pantalla
     private List<ProductWithVariants> filteredList = new ArrayList<>();
 
-    // Guardamos qué categoría está seleccionada (Por defecto "Todos")
+    // Categoría seleccionada
     private String currentCategory = "Todos";
-    // ------------------------------------
+
+    // --- PAGINACIÓN ---
+    private int currentPage = 0;
+    private final int ITEMS_PER_PAGE = 20;
+    private TextView tvPageInfo;
+    private android.widget.Button btnPrev, btnNext;
 
     private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 1. Cargar Tema guardado antes de inflar la vista
+        // 1. Cargar Tema
         sharedPreferences = getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         boolean isDarkMode = sharedPreferences.getBoolean("DARK_MODE", false);
         if (isDarkMode) {
@@ -76,7 +80,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Configurar Toolbar
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayShowHomeEnabled(true);
             getSupportActionBar().setDisplayUseLogoEnabled(true);
@@ -90,24 +93,21 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_quick_finance).setOnClickListener(v -> startActivity(new Intent(this, FinancialActivity.class)));
         findViewById(R.id.btn_quick_calc).setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
 
-        // --- NUEVO: BOTONES DE CATEGORÍA ---
+        // Configurar Botones y Paginación
         setupCategoryButtons();
-        // -----------------------------------
+        setupPaginationControls();
 
         // Configurar RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Configurar Adapter
         adapter = new ProductAdapter(new ArrayList<>(), product -> {
-            // Al hacer click, mandamos al Detalle (ProductDetailActivity)
             Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
             intent.putExtra("product_data", product);
             startActivity(intent);
         });
         recyclerView.setAdapter(adapter);
 
-        // Vistas y ViewModel
         tvTodaySales = findViewById(R.id.tv_home_today_sales);
         tvEmpty = findViewById(R.id.tv_empty);
         FloatingActionButton fab = findViewById(R.id.fab_add);
@@ -117,91 +117,32 @@ public class MainActivity extends AppCompatActivity {
 
         // --- OBSERVADORES ---
 
-        // 1. Productos: Actualizamos la lista cuando la base de datos cambie
+        // 1. Productos
         productViewModel.getAllProducts().observe(this, products -> {
-            // Guardamos la copia maestra
             fullProductList = products;
-
-            // Aplicamos el filtro activo (si estaba en "Todos", muestra todo)
             filterByCategory(currentCategory);
         });
 
-        // 2. Transacciones: Calculamos lo vendido hoy
-        transactionViewModel.getHistory().observe(this, this::calculateTodaySales); // Usar referencia a método
+        // 2. Transacciones (Aquí calculamos "Ventas de Hoy")
+        transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
 
-        // Botón agregar
         fab.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
-    }
 
-    // --- NUEVO: LÓGICA DE BOTONES DE CATEGORÍA ---
-    private void setupCategoryButtons() {
-        // Botón TODOS
-        findViewById(R.id.btn_cat_todos).setOnClickListener(v -> {
-            filterByCategory("Todos");
-            actualizarColoresBotones(R.id.btn_cat_todos);
-        });
+        // --- AGREGAR ESTO AL FINAL DEL ONCREATE ---
+        if (getSupportActionBar() != null) {
+            // 1. Habilitar la vista personalizada
+            getSupportActionBar().setDisplayOptions(androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM);
 
-        // Botón REMERAS
-        findViewById(R.id.btn_cat_remeras).setOnClickListener(v -> {
-            filterByCategory("Remeras");
-            actualizarColoresBotones(R.id.btn_cat_remeras);
-        });
+            // 2. Decirle qué archivo XML cargar (TU BARRA CON LOGO)
+            getSupportActionBar().setCustomView(R.layout.custom_toolbar);
 
-        // Botón PANTALONES
-        findViewById(R.id.btn_cat_pantalones).setOnClickListener(v -> {
-            filterByCategory("Pantalones");
-            actualizarColoresBotones(R.id.btn_cat_pantalones);
-        });
-
-        // Botón ACCESORIOS
-        findViewById(R.id.btn_cat_accesorios).setOnClickListener(v -> {
-            filterByCategory("Accesorios");
-            actualizarColoresBotones(R.id.btn_cat_accesorios);
-        });
-
-        // Botón ABRIGOS
-        findViewById(R.id.btn_cat_abrigos).setOnClickListener(v -> {
-            filterByCategory("Abrigos");
-            actualizarColoresBotones(R.id.btn_cat_abrigos);
-        });
-
-        // Botón OTROS
-        findViewById(R.id.btn_cat_otros).setOnClickListener(v -> {
-            filterByCategory("Otros");
-            actualizarColoresBotones(R.id.btn_cat_otros);
-        });
-    }
-
-    private void filterByCategory(String category) {
-        currentCategory = category;
-        filteredList.clear();
-
-        if (category.equalsIgnoreCase("Todos")) {
-            // Si es "Todos", copiamos toda la lista maestra
-            filteredList.addAll(fullProductList);
-        } else {
-            // Si es específico, buscamos uno por uno
-            for (ProductWithVariants item : fullProductList) {
-                // Verificamos null para evitar crashes
-                if (item.product.category != null && item.product.category.equalsIgnoreCase(category)) {
-                    filteredList.add(item);
-                }
-            }
-        }
-
-        // Actualizamos el adaptador con la lista filtrada
-        adapter.setProductList(filteredList);
-
-        // Mostramos mensaje de vacío si corresponde
-        tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
-        if (filteredList.isEmpty()) {
-            tvEmpty.setText("No hay productos en " + category);
-        } else {
-            tvEmpty.setText("No hay productos cargados"); // Texto por defecto
+            // 3. (Opcional) Quitar la elevación (sombra) si quieres que se vea plano
+            getSupportActionBar().setElevation(0);
         }
     }
-    // ---------------------------------------------
 
+    // --- LÓGICA DE VENTAS DE HOY (CORREGIDA) ---
+    // --- LÓGICA DE VENTAS DE HOY (CORREGIDA) ---
     private void calculateTodaySales(List<TransactionEntity> transactions) {
         double todayTotal = 0;
         Calendar cal = Calendar.getInstance();
@@ -210,12 +151,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (transactions != null) {
             for (TransactionEntity t : transactions) {
-                // Verificar si la fecha es HOY
                 Calendar transCal = Calendar.getInstance();
                 transCal.setTimeInMillis(t.timestamp);
 
+                // 1. Verificamos que sea HOY
                 if (transCal.get(Calendar.DAY_OF_YEAR) == day && transCal.get(Calendar.YEAR) == year) {
-                    if (t.type == TransactionType.INCOME) {
+
+                    // 2. CORRECCIÓN IMPORTANTE: Usamos .equals() en lugar de ==
+                    // Además verificamos que t.type no sea null para evitar cierres inesperados
+                    boolean esIngreso = t.type != null && t.type.equals(TransactionType.INCOME);
+
+                    if (esIngreso && !esInversion(t)) {
                         todayTotal += t.totalAmount;
                     }
                 }
@@ -224,9 +170,109 @@ public class MainActivity extends AppCompatActivity {
         tvTodaySales.setText("$ " + String.format("%.0f", todayTotal));
     }
 
+    // Filtro para ignorar inversiones en la tarjeta de Ventas
+    private boolean esInversion(TransactionEntity t) {
+        if (t.description == null) return false;
+        String desc = t.description.toLowerCase();
+        return desc.contains("inversión") || desc.contains("inversion") || desc.contains("capital");
+    }
+
+    // --- FILTROS DE CATEGORÍA ---
+    private void setupCategoryButtons() {
+        int[] ids = {
+                R.id.btn_cat_todos, R.id.btn_cat_remeras, R.id.btn_cat_pantalones,
+                R.id.btn_cat_accesorios, R.id.btn_cat_abrigos, R.id.btn_cat_otros
+        };
+        String[] cats = {"Todos", "Remeras", "Pantalones", "Accesorios", "Abrigos", "Otros"};
+
+        for (int i = 0; i < ids.length; i++) {
+            int id = ids[i];
+            String cat = cats[i];
+            findViewById(id).setOnClickListener(v -> {
+                filterByCategory(cat);
+                actualizarColoresBotones(id);
+            });
+        }
+    }
+
+    private void filterByCategory(String category) {
+        currentCategory = category;
+        filteredList.clear();
+
+        if (category.equalsIgnoreCase("Todos")) {
+            filteredList.addAll(fullProductList);
+        } else {
+            for (ProductWithVariants item : fullProductList) {
+                if (item.product.category != null && item.product.category.equalsIgnoreCase(category)) {
+                    filteredList.add(item);
+                }
+            }
+        }
+
+        tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
+        if (filteredList.isEmpty()) {
+            tvEmpty.setText("No hay productos en " + category);
+        } else {
+            tvEmpty.setText("No hay productos cargados");
+        }
+
+        currentPage = 0; // Reiniciar página
+        actualizarPaginacion();
+    }
+
+    // --- PAGINACIÓN ---
+    private void setupPaginationControls() {
+        tvPageInfo = findViewById(R.id.tv_page_info);
+        btnPrev = findViewById(R.id.btn_page_prev);
+        btnNext = findViewById(R.id.btn_page_next);
+
+        btnPrev.setOnClickListener(v -> {
+            if (currentPage > 0) {
+                currentPage--;
+                actualizarPaginacion();
+            }
+        });
+
+        btnNext.setOnClickListener(v -> {
+            int totalPages = (int) Math.ceil((double) filteredList.size() / ITEMS_PER_PAGE);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                actualizarPaginacion();
+            }
+        });
+    }
+
+    private void actualizarPaginacion() {
+        int totalItems = filteredList.size();
+        int totalPages = (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE);
+
+        if (totalPages == 0) totalPages = 1;
+        if (currentPage >= totalPages) currentPage = totalPages - 1;
+        if (currentPage < 0) currentPage = 0;
+
+        int start = currentPage * ITEMS_PER_PAGE;
+        int end = Math.min(start + ITEMS_PER_PAGE, totalItems);
+
+        List<ProductWithVariants> pageItems = new ArrayList<>();
+        if (totalItems > 0) {
+            pageItems = filteredList.subList(start, end);
+        }
+
+        adapter.setProductList(pageItems);
+
+        if (tvPageInfo != null) tvPageInfo.setText((currentPage + 1) + " / " + totalPages);
+
+        if (btnPrev != null && btnNext != null) {
+            btnPrev.setEnabled(currentPage > 0);
+            btnNext.setEnabled(currentPage < totalPages - 1);
+            btnPrev.setAlpha(currentPage > 0 ? 1.0f : 0.3f);
+            btnNext.setAlpha(currentPage < totalPages - 1 ? 1.0f : 0.3f);
+        }
+    }
+
+    // --- MENÚ Y EXTRAS ---
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Menú Buscar
         MenuItem searchItem = menu.add(Menu.NONE, 0, Menu.NONE, "Buscar");
         searchItem.setIcon(android.R.drawable.ic_menu_search);
         searchItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
@@ -239,13 +285,10 @@ public class MainActivity extends AppCompatActivity {
             @Override public boolean onQueryTextChange(String newText) { filterListByName(newText); return true; }
         });
 
-        // Menús Extras
         menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad");
-
         boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
         String themeTitle = isDark ? "☀️ Modo Claro" : "🌙 Modo Oscuro";
         menu.add(Menu.NONE, 5, Menu.NONE, themeTitle);
-
         return true;
     }
 
@@ -270,13 +313,8 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
-    // --- CORREGIDO: BUSCADOR POR NOMBRE ---
-    // Este filtro trabaja SOBRE la categoría actual (Filtro doble)
     private void filterListByName(String text) {
         List<ProductWithVariants> searchResults = new ArrayList<>();
-
-        // Buscamos dentro de la lista YA FILTRADA por categoría
-        // Así si estás en "Remeras" y buscas "Azul", solo busca en remeras
         for (ProductWithVariants item : filteredList) {
             if (item.product.getName().toLowerCase().contains(text.toLowerCase())) {
                 searchResults.add(item);
@@ -303,14 +341,11 @@ public class MainActivity extends AppCompatActivity {
             String fileName = "FerSe_Backup_" + System.currentTimeMillis() + ".csv";
             File file = new File(folder, fileName);
             FileWriter writer = new FileWriter(file);
-
             writer.append("ID,Producto,Costo,Venta,Stock Total\n");
-
             for (ProductWithVariants item : fullProductList) {
                 ProductEntity p = item.product;
                 writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + item.getTotalStock() + "\n");
             }
-
             writer.flush();
             writer.close();
             Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();
@@ -319,33 +354,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // --- MÉTODO PARA PINTAR LOS BOTONES ---
     private void actualizarColoresBotones(int idBotonActivo) {
-        // Lista de todos los IDs de tus botones
-        int[] idsBotones = {
-                R.id.btn_cat_todos,
-                R.id.btn_cat_remeras,
-                R.id.btn_cat_pantalones,
-                R.id.btn_cat_abrigos,
-                R.id.btn_cat_accesorios,
-                R.id.btn_cat_otros
+        int[] ids = {
+                R.id.btn_cat_todos, R.id.btn_cat_remeras, R.id.btn_cat_pantalones,
+                R.id.btn_cat_abrigos, R.id.btn_cat_accesorios, R.id.btn_cat_otros
         };
-
-        // Colores (Los mismos de tu diseño)
-        int colorActivo = android.graphics.Color.parseColor("#546E7A"); // Azul Oscuro
-        int colorInactivo = android.graphics.Color.parseColor("#CFD8DC"); // Gris Claro
+        int colorActivo = android.graphics.Color.parseColor("#546E7A");
+        int colorInactivo = android.graphics.Color.parseColor("#CFD8DC");
         int textoBlanco = android.graphics.Color.WHITE;
         int textoGris = android.graphics.Color.parseColor("#455A64");
 
-        for (int id : idsBotones) {
+        for (int id : ids) {
             android.widget.Button btn = findViewById(id);
             if (btn != null) {
                 if (id == idBotonActivo) {
-                    // SI ES EL ELEGIDO: Lo pintamos Azul
                     btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorActivo));
                     btn.setTextColor(textoBlanco);
                 } else {
-                    // SI NO: Lo pintamos Gris
                     btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorInactivo));
                     btn.setTextColor(textoGris);
                 }

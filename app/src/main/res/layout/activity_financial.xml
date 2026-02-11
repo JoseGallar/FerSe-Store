@@ -74,7 +74,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="VENTAS"
+                    android:text="INGRESOS"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="#2E7D32"/>

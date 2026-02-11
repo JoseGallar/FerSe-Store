@@ -51,6 +51,10 @@
             android:label="Movimientos"
             android:parentActivityName=".ui.view.WalletActivity"/>
 
+        <activity android:name=".ui.view.DebtsActivity"
+            android:label="Lista de Deudores"
+            android:parentActivityName=".ui.view.WalletActivity"/>
+
     </application>
 
 </manifest>

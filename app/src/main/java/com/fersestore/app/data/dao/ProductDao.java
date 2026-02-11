@@ -47,4 +47,7 @@ public interface ProductDao {
     @Transaction
     @Query("SELECT * FROM products WHERE id = :id")
     LiveData<ProductWithVariants> getProductById(int id);
+
+    @Query("UPDATE product_variants SET stock = stock + :cantidad WHERE id = :variantId")
+    void devolverStock(int variantId, int cantidad);
 }

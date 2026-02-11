@@ -65,7 +65,7 @@
                 android:layout_height="wrap_content"
                 android:text="Stock: 0"
                 android:textSize="12sp"
-                android:textColor="#757575"
+                android:textColor="?android:attr/textColorPrimary"
                 android:layout_marginTop="2dp"/>
         </LinearLayout>
 

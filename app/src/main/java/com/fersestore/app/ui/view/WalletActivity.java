@@ -20,9 +20,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fersestore.app.R;
+import com.fersestore.app.data.entity.ProductWithVariants;
 import com.fersestore.app.data.entity.TransactionEntity;
 import com.fersestore.app.domain.model.TransactionType;
 import com.fersestore.app.ui.adapter.TransactionAdapter;
+import com.fersestore.app.ui.viewmodel.DebtViewModel; // <--- NUEVO
+import com.fersestore.app.ui.viewmodel.ProductViewModel;
 import com.fersestore.app.ui.viewmodel.TransactionViewModel;
 
 import java.text.DecimalFormat;
@@ -34,6 +37,8 @@ import java.util.List;
 public class WalletActivity extends AppCompatActivity {
 
     private TransactionViewModel transactionViewModel;
+    private ProductViewModel productViewModel;
+    private DebtViewModel debtViewModel; // <--- NUEVO: Para sumar lo que te deben
     private TransactionAdapter adapter;
 
     // Vistas
@@ -45,7 +50,6 @@ public class WalletActivity extends AppCompatActivity {
     private List<TransactionEntity> filteredTransactions = new ArrayList<>();
 
     // 0=Todo, 1=Mes, 2=Hoy
-    // CAMBIO: Empezamos en 0 (Todo) para que veas datos apenas entras
     private int currentFilterMode = 0;
 
     @Override
@@ -58,18 +62,39 @@ public class WalletActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
 
+        // 1. INICIALIZAR VIEWMODELS
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
+        productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
+        debtViewModel = new ViewModelProvider(this).get(DebtViewModel.class); // <--- NUEVO
+
+        // 2. OBSERVADORES
+
+        // A) Transacciones (Caja, Inversión, Historial)
         transactionViewModel.getHistory().observe(this, transactions -> {
             this.allTransactions = transactions;
-            recalcularTodo();
+            recalcularCajaYLista();
         });
 
-        // Listeners Filtros
+        // B) Productos (Para calcular "En Mercadería")
+        productViewModel.getAllProducts().observe(this, this::calcularValorMercaderia);
+
+        // C) Deudas (Para calcular "Me Deben" y mostrar el total real)
+        debtViewModel.getTotalDebt().observe(this, totalDeuda -> {
+            if (totalDeuda != null) {
+                tvMeDeben.setText(formatoDinero(totalDeuda));
+            } else {
+                tvMeDeben.setText("$ 0");
+            }
+        });
+
+        // 3. LISTENERS
+
+        // Filtros de fecha
         btnFilterAll.setOnClickListener(v -> cambiarFiltro(0));
         btnFilterMonth.setOnClickListener(v -> cambiarFiltro(1));
         btnFilterToday.setOnClickListener(v -> cambiarFiltro(2));
 
-        // Acciones Botones
+        // Botones de Acción (+ Gasto, + Inversión)
         findViewById(R.id.btn_record_expense).setOnClickListener(v -> mostrarDialogoGasto());
         findViewById(R.id.btn_add_investment).setOnClickListener(v -> mostrarDialogoInversion());
     }
@@ -83,6 +108,13 @@ public class WalletActivity extends AppCompatActivity {
         btnFilterAll = findViewById(R.id.btn_filter_all);
         btnFilterMonth = findViewById(R.id.btn_filter_month);
         btnFilterToday = findViewById(R.id.btn_filter_today);
+
+        // --- AQUÍ ESTÁ EL CLICK QUE FALTABA ---
+        // Al tocar "Me Deben", te lleva a la pantalla de lista de deudores
+        tvMeDeben.setOnClickListener(v -> {
+            startActivity(new Intent(WalletActivity.this, DebtsActivity.class));
+        });
+        // --------------------------------------
     }
 
     private void setupRecyclerView() {
@@ -90,7 +122,6 @@ public class WalletActivity extends AppCompatActivity {
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TransactionAdapter(new ArrayList<>());
 
-        // BORRAR CON CLICK LARGO
         adapter.setOnItemLongClickListener(transaction -> {
             mostrarDialogoBorrar(transaction);
         });
@@ -98,16 +129,15 @@ public class WalletActivity extends AppCompatActivity {
         rv.setAdapter(adapter);
     }
 
-    // --- CÁLCULOS PRINCIPALES ---
-    private void recalcularTodo() {
+    // --- CÁLCULOS ---
+
+    private void recalcularCajaYLista() {
         double cajaTotal = 0;
         double inversionAcumulada = 0;
 
         for (TransactionEntity t : allTransactions) {
             if (TransactionType.INCOME.equals(t.type)) {
                 cajaTotal += t.totalAmount;
-
-                // Sumamos a la tarjeta naranja si parece ser una inversión
                 if (esInversion(t)) {
                     inversionAcumulada += t.totalAmount;
                 }
@@ -119,15 +149,26 @@ public class WalletActivity extends AppCompatActivity {
         tvTotalCaja.setText(formatoDinero(cajaTotal));
         tvTotalInversion.setText(formatoDinero(inversionAcumulada));
 
-        // Actualizar la lista de abajo
         aplicarFiltroLista(currentFilterMode);
     }
 
-    // Función auxiliar para detectar inversiones (Mejorada)
+    private void calcularValorMercaderia(List<ProductWithVariants> products) {
+        double valorTotalStock = 0;
+        if (products != null) {
+            for (ProductWithVariants item : products) {
+                double costoCompra = item.product.costPrice;
+                int cantidadEnStock = item.getTotalStock();
+                valorTotalStock += (costoCompra * cantidadEnStock);
+            }
+        }
+        tvStockValue.setText(formatoDinero(valorTotalStock));
+    }
+
+    // --- UTILIDADES ---
+
     private boolean esInversion(TransactionEntity t) {
         if (t.description == null) return false;
         String desc = t.description.toLowerCase();
-        // Detecta "inversión", "inversion" (sin acento) o "capital"
         return desc.contains("inversión") || desc.contains("inversion") || desc.contains("capital");
     }
 
@@ -138,11 +179,11 @@ public class WalletActivity extends AppCompatActivity {
         return "$ " + df.format(cantidad);
     }
 
-    // --- FILTROS DE LISTA ---
+    // --- FILTROS ---
+
     private void cambiarFiltro(int modo) {
         currentFilterMode = modo;
 
-        // Colores botones
         int colorActivo = Color.parseColor("#546E7A");
         int colorInactivo = Color.parseColor("#CFD8DC");
         int textoBlanco = Color.WHITE;
@@ -174,20 +215,16 @@ public class WalletActivity extends AppCompatActivity {
         long startOfMonth = cal.getTimeInMillis();
 
         for (TransactionEntity t : allTransactions) {
-            // A. Filtro de Tiempo
             boolean pasaTiempo = false;
-            if (modo == 0) pasaTiempo = true; // Todo
-            else if (modo == 1 && t.timestamp >= startOfMonth) pasaTiempo = true; // Mes
-            else if (modo == 2 && t.timestamp >= startOfToday) pasaTiempo = true; // Hoy
+            if (modo == 0) pasaTiempo = true;
+            else if (modo == 1 && t.timestamp >= startOfMonth) pasaTiempo = true;
+            else if (modo == 2 && t.timestamp >= startOfToday) pasaTiempo = true;
 
-            // B. Filtro de TIPO (Qué mostramos en la lista)
             boolean mostrar = false;
-
             if (pasaTiempo) {
                 if (t.type == TransactionType.EXPENSE) {
-                    mostrar = true; // ¡SIEMPRE mostrar Gastos!
+                    mostrar = true;
                 } else if (TransactionType.INCOME.equals(t.type)) {
-                    // Mostrar ingresos SOLO si son Inversiones
                     if (esInversion(t)) {
                         mostrar = true;
                     }
@@ -202,6 +239,7 @@ public class WalletActivity extends AppCompatActivity {
     }
 
     // --- DIÁLOGOS ---
+
     private void mostrarDialogoInversion() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("💰 Ingresar Inversión");
@@ -225,7 +263,6 @@ public class WalletActivity extends AppCompatActivity {
             String montoStr = inputMonto.getText().toString().trim();
             String notaStr = inputNota.getText().toString().trim();
 
-            // VALIDACIÓN: No guardar vacío ni 0
             if (!montoStr.isEmpty()) {
                 double monto = Double.parseDouble(montoStr);
 
@@ -270,7 +307,6 @@ public class WalletActivity extends AppCompatActivity {
             String desc = inputDesc.getText().toString().trim();
             String montoStr = inputMonto.getText().toString().trim();
 
-            // VALIDACIÓN: No guardar vacío ni 0
             if (!montoStr.isEmpty()) {
                 double monto = Double.parseDouble(montoStr);
 
@@ -291,7 +327,6 @@ public class WalletActivity extends AppCompatActivity {
         builder.show();
     }
 
-    // Diálogo de Borrar
     private void mostrarDialogoBorrar(TransactionEntity t) {
         new AlertDialog.Builder(this)
                 .setTitle("¿Borrar Movimiento?")
@@ -304,7 +339,6 @@ public class WalletActivity extends AppCompatActivity {
                 .show();
     }
 
-    // --- MENÚ COMPARTIR ---
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_financial, menu);

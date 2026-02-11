@@ -7,7 +7,6 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import static androidx.room.ForeignKey.CASCADE;
-
 @Entity(
         tableName = "product_variants",
         foreignKeys = @ForeignKey(
@@ -21,6 +20,7 @@ import static androidx.room.ForeignKey.CASCADE;
 public class ProductVariantEntity {
 
     @PrimaryKey(autoGenerate = true)
+    public int id;
     public int variantId;
 
     @ColumnInfo(name = "productId")

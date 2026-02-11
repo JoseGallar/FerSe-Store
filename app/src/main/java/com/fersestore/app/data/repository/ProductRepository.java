@@ -63,4 +63,10 @@ public class ProductRepository {
     public void insertVariant(ProductVariantEntity variant) {
         AppDatabase.databaseWriteExecutor.execute(() -> productDao.insertVariant(variant));
     }
+
+    public void devolverStock(int variantId, int cantidad) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            productDao.devolverStock(variantId, cantidad);
+        });
+    }
 }

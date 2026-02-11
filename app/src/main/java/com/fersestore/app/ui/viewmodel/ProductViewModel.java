@@ -57,4 +57,9 @@ public class ProductViewModel extends AndroidViewModel {
     public LiveData<ProductWithVariants> getProductById(int id) {
         return mRepository.getProductById(id);
     }
+
+    public void devolverStock(int variantId, int cantidad) {
+        // Usamos el método que acabamos de crear en el repositorio
+        mRepository.devolverStock(variantId, cantidad);
+    }
 }
