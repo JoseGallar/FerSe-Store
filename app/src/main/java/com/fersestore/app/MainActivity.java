@@ -57,6 +57,9 @@ public class MainActivity extends AppCompatActivity {
     // Variables de estado local para la paginación visual
     private int totalItemsCount = 0;
 
+    // NUEVA VARIABLE PARA GUARDAR LA POSICIÓN
+    private android.os.Parcelable listState;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Configuración de tema
@@ -113,6 +116,11 @@ public class MainActivity extends AppCompatActivity {
                 // Texto de vacío más descriptivo
                 if (products.isEmpty()) {
                     tvEmpty.setText("No se encontraron productos");
+                }
+
+                if (listState != null && recyclerView.getLayoutManager() != null) {
+                    recyclerView.getLayoutManager().onRestoreInstanceState(listState);
+                    listState = null; // Ya lo usamos, lo limpiamos
                 }
             }
         });
@@ -324,6 +332,26 @@ public class MainActivity extends AppCompatActivity {
                     btn.setTextColor(android.graphics.Color.parseColor("#455A64"));
                 }
             }
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // Guardamos la posición exacta del scroll
+        RecyclerView rv = findViewById(R.id.recyclerView);
+        if (rv != null && rv.getLayoutManager() != null) {
+            listState = rv.getLayoutManager().onSaveInstanceState();
+            outState.putParcelable("recycler_state", listState);
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        // Recuperamos la posición cuando la actividad revive
+        if (savedInstanceState != null) {
+            listState = savedInstanceState.getParcelable("recycler_state");
         }
     }
 }

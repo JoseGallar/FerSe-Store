@@ -49,4 +49,7 @@ dependencies {
     // Base de data Room (Actualizable a 2.8.4)
     implementation("androidx.room:room-runtime:2.8.4")
     annotationProcessor("androidx.room:room-compiler:2.8.4")
+    // Librería para cargar imágenes rápido (Glide)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 }
