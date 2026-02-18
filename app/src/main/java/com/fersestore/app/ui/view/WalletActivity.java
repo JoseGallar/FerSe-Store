@@ -75,8 +75,15 @@ public class WalletActivity extends AppCompatActivity {
             recalcularCajaYLista();
         });
 
-        // B) Productos (Para calcular "En Mercadería")
-        productViewModel.getAllProducts().observe(this, this::calcularValorMercaderia);
+        // B) Productos (Para calcular "En Mercadería") - OPTIMIZADO
+// Ahora observamos directamente el valor total calculado por la base de datos
+        productViewModel.getTotalStockValue().observe(this, totalValue -> {
+            if (totalValue != null) {
+                tvStockValue.setText(formatoDinero(totalValue));
+            } else {
+                tvStockValue.setText("$ 0");
+            }
+        });
 
         // C) Deudas (Para calcular "Me Deben" y mostrar el total real)
         debtViewModel.getTotalDebt().observe(this, totalDeuda -> {

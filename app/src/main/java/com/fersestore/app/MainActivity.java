@@ -50,26 +50,16 @@ public class MainActivity extends AppCompatActivity {
     private TransactionViewModel transactionViewModel;
     private ProductAdapter adapter;
 
-    private TextView tvTodaySales, tvEmpty;
-
-    // --- LISTAS PARA EL FILTRO ---
-    private List<ProductWithVariants> fullProductList = new ArrayList<>();
-    private List<ProductWithVariants> filteredList = new ArrayList<>();
-
-    // Categoría seleccionada
-    private String currentCategory = "Todos";
-
-    // --- PAGINACIÓN ---
-    private int currentPage = 0;
-    private final int ITEMS_PER_PAGE = 20;
-    private TextView tvPageInfo;
-    private android.widget.Button btnPrev, btnNext;
-
+    private TextView tvTodaySales, tvEmpty, tvPageInfo;
+    private Button btnPrev, btnNext;
     private SharedPreferences sharedPreferences;
+
+    // Variables de estado local para la paginación visual
+    private int totalItemsCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 1. Cargar Tema
+        // Configuración de tema
         sharedPreferences = getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         boolean isDarkMode = sharedPreferences.getBoolean("DARK_MODE", false);
         if (isDarkMode) {
@@ -81,27 +71,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-            getSupportActionBar().setDisplayUseLogoEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(true);
-            getSupportActionBar().setTitle(" FerSe Store");
-            getSupportActionBar().setElevation(0);
-        }
+        setupToolbar();
+        setupQuickAccess();
 
-        // --- ACCESOS RÁPIDOS ---
-        findViewById(R.id.btn_quick_wallet).setOnClickListener(v -> startActivity(new Intent(this, WalletActivity.class)));
-        findViewById(R.id.btn_quick_finance).setOnClickListener(v -> startActivity(new Intent(this, FinancialActivity.class)));
-        findViewById(R.id.btn_quick_calc).setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
+        // Inicializar ViewModels
+        productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
+        transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
 
-        // Configurar Botones y Paginación
-        setupCategoryButtons();
-        setupPaginationControls();
-
-        // Configurar RecyclerView
+        // Inicializar UI de Lista
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // Al adaptador le pasamos una lista vacía, se llenará con el Observer
         adapter = new ProductAdapter(new ArrayList<>(), product -> {
             Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
             intent.putExtra("product_data", product);
@@ -111,71 +92,84 @@ public class MainActivity extends AppCompatActivity {
 
         tvTodaySales = findViewById(R.id.tv_home_today_sales);
         tvEmpty = findViewById(R.id.tv_empty);
+        tvPageInfo = findViewById(R.id.tv_page_info);
+        btnPrev = findViewById(R.id.btn_page_prev);
+        btnNext = findViewById(R.id.btn_page_next);
+
+        setupCategoryButtons();
+        setupPaginationControls();
+
         FloatingActionButton fab = findViewById(R.id.fab_add);
-
-        productViewModel = new ViewModelProvider(this).get(ProductViewModel.class);
-        transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
-
-        // --- OBSERVADORES ---
-
-        // 1. Productos
-        productViewModel.getAllProducts().observe(this, products -> {
-            fullProductList = products;
-            filterByCategory(currentCategory);
-        });
-
-        // 2. Transacciones (Aquí calculamos "Ventas de Hoy")
-        transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
-
         fab.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
 
-        // --- AGREGAR ESTO AL FINAL DEL ONCREATE ---
+        // --- OBSERVAR DATOS (La parte optimizada) ---
+
+        // 1. Observar la LISTA PAGINADA (Solo llegan 20 items)
+        productViewModel.getPagedProducts().observe(this, products -> {
+            if (products != null) {
+                adapter.setProductList(products);
+                tvEmpty.setVisibility(products.isEmpty() ? View.VISIBLE : View.GONE);
+
+                // Texto de vacío más descriptivo
+                if (products.isEmpty()) {
+                    tvEmpty.setText("No se encontraron productos");
+                }
+            }
+        });
+
+        // 2. Observar el CONTEO TOTAL (Para saber si habilitar botón Next)
+        productViewModel.getTotalItemCount().observe(this, count -> {
+            totalItemsCount = count != null ? count : 0;
+            updatePaginationInfo();
+        });
+
+        // 3. Observar la PÁGINA ACTUAL (Para actualizar el texto 1/X)
+        productViewModel.getCurrentPage().observe(this, page -> {
+            updatePaginationInfo();
+        });
+
+        // 4. Calcular Ventas de Hoy
+        transactionViewModel.getHistory().observe(this, this::calculateTodaySales);
+    }
+
+    private void setupToolbar() {
         if (getSupportActionBar() != null) {
-            // 1. Habilitar la vista personalizada
             getSupportActionBar().setDisplayOptions(androidx.appcompat.app.ActionBar.DISPLAY_SHOW_CUSTOM);
-
-            // 2. Decirle qué archivo XML cargar (TU BARRA CON LOGO)
             getSupportActionBar().setCustomView(R.layout.custom_toolbar);
-
-            // 3. (Opcional) Quitar la elevación (sombra) si quieres que se vea plano
             getSupportActionBar().setElevation(0);
         }
     }
 
-    // --- LÓGICA DE VENTAS DE HOY (CORREGIDA) ---
-    // --- LÓGICA DE VENTAS DE HOY (CORREGIDA) ---
-    private void calculateTodaySales(List<TransactionEntity> transactions) {
-        double todayTotal = 0;
-        Calendar cal = Calendar.getInstance();
-        int day = cal.get(Calendar.DAY_OF_YEAR);
-        int year = cal.get(Calendar.YEAR);
-
-        if (transactions != null) {
-            for (TransactionEntity t : transactions) {
-                Calendar transCal = Calendar.getInstance();
-                transCal.setTimeInMillis(t.timestamp);
-
-                // 1. Verificamos que sea HOY
-                if (transCal.get(Calendar.DAY_OF_YEAR) == day && transCal.get(Calendar.YEAR) == year) {
-
-                    // 2. CORRECCIÓN IMPORTANTE: Usamos .equals() en lugar de ==
-                    // Además verificamos que t.type no sea null para evitar cierres inesperados
-                    boolean esIngreso = t.type != null && t.type.equals(TransactionType.INCOME);
-
-                    if (esIngreso && !esInversion(t)) {
-                        todayTotal += t.totalAmount;
-                    }
-                }
-            }
-        }
-        tvTodaySales.setText("$ " + String.format("%.0f", todayTotal));
+    private void setupQuickAccess() {
+        findViewById(R.id.btn_quick_wallet).setOnClickListener(v -> startActivity(new Intent(this, WalletActivity.class)));
+        findViewById(R.id.btn_quick_finance).setOnClickListener(v -> startActivity(new Intent(this, FinancialActivity.class)));
+        findViewById(R.id.btn_quick_calc).setOnClickListener(v -> startActivity(new Intent(this, CalculatorActivity.class)));
     }
 
-    // Filtro para ignorar inversiones en la tarjeta de Ventas
-    private boolean esInversion(TransactionEntity t) {
-        if (t.description == null) return false;
-        String desc = t.description.toLowerCase();
-        return desc.contains("inversión") || desc.contains("inversion") || desc.contains("capital");
+    // --- PAGINACIÓN ---
+    private void setupPaginationControls() {
+        btnPrev.setOnClickListener(v -> productViewModel.prevPage());
+        btnNext.setOnClickListener(v -> productViewModel.nextPage());
+    }
+
+    private void updatePaginationInfo() {
+        int currentPage = productViewModel.getCurrentPage().getValue() != null ? productViewModel.getCurrentPage().getValue() : 0;
+        int itemsPerPage = productViewModel.getItemsPerPage();
+
+        // Calcular total de páginas
+        int totalPages = (int) Math.ceil((double) totalItemsCount / itemsPerPage);
+        if (totalPages == 0) totalPages = 1;
+
+        // Actualizar texto visual (Humano ve página 1, código es 0)
+        tvPageInfo.setText((currentPage + 1) + " / " + totalPages);
+
+        // Habilitar/Deshabilitar botones
+        btnPrev.setEnabled(currentPage > 0);
+        btnPrev.setAlpha(currentPage > 0 ? 1.0f : 0.3f);
+
+        boolean hayMasPaginas = (currentPage < totalPages - 1);
+        btnNext.setEnabled(hayMasPaginas);
+        btnNext.setAlpha(hayMasPaginas ? 1.0f : 0.3f);
     }
 
     // --- FILTROS DE CATEGORÍA ---
@@ -190,88 +184,13 @@ public class MainActivity extends AppCompatActivity {
             int id = ids[i];
             String cat = cats[i];
             findViewById(id).setOnClickListener(v -> {
-                filterByCategory(cat);
+                productViewModel.setCategory(cat); // Esto dispara la recarga en BD
                 actualizarColoresBotones(id);
             });
         }
     }
 
-    private void filterByCategory(String category) {
-        currentCategory = category;
-        filteredList.clear();
-
-        if (category.equalsIgnoreCase("Todos")) {
-            filteredList.addAll(fullProductList);
-        } else {
-            for (ProductWithVariants item : fullProductList) {
-                if (item.product.category != null && item.product.category.equalsIgnoreCase(category)) {
-                    filteredList.add(item);
-                }
-            }
-        }
-
-        tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
-        if (filteredList.isEmpty()) {
-            tvEmpty.setText("No hay productos en " + category);
-        } else {
-            tvEmpty.setText("No hay productos cargados");
-        }
-
-        currentPage = 0; // Reiniciar página
-        actualizarPaginacion();
-    }
-
-    // --- PAGINACIÓN ---
-    private void setupPaginationControls() {
-        tvPageInfo = findViewById(R.id.tv_page_info);
-        btnPrev = findViewById(R.id.btn_page_prev);
-        btnNext = findViewById(R.id.btn_page_next);
-
-        btnPrev.setOnClickListener(v -> {
-            if (currentPage > 0) {
-                currentPage--;
-                actualizarPaginacion();
-            }
-        });
-
-        btnNext.setOnClickListener(v -> {
-            int totalPages = (int) Math.ceil((double) filteredList.size() / ITEMS_PER_PAGE);
-            if (currentPage < totalPages - 1) {
-                currentPage++;
-                actualizarPaginacion();
-            }
-        });
-    }
-
-    private void actualizarPaginacion() {
-        int totalItems = filteredList.size();
-        int totalPages = (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE);
-
-        if (totalPages == 0) totalPages = 1;
-        if (currentPage >= totalPages) currentPage = totalPages - 1;
-        if (currentPage < 0) currentPage = 0;
-
-        int start = currentPage * ITEMS_PER_PAGE;
-        int end = Math.min(start + ITEMS_PER_PAGE, totalItems);
-
-        List<ProductWithVariants> pageItems = new ArrayList<>();
-        if (totalItems > 0) {
-            pageItems = filteredList.subList(start, end);
-        }
-
-        adapter.setProductList(pageItems);
-
-        if (tvPageInfo != null) tvPageInfo.setText((currentPage + 1) + " / " + totalPages);
-
-        if (btnPrev != null && btnNext != null) {
-            btnPrev.setEnabled(currentPage > 0);
-            btnNext.setEnabled(currentPage < totalPages - 1);
-            btnPrev.setAlpha(currentPage > 0 ? 1.0f : 0.3f);
-            btnNext.setAlpha(currentPage < totalPages - 1 ? 1.0f : 0.3f);
-        }
-    }
-
-    // --- MENÚ Y EXTRAS ---
+    // --- BÚSQUEDA ---
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuItem searchItem = menu.add(Menu.NONE, 0, Menu.NONE, "Buscar");
@@ -281,9 +200,16 @@ public class MainActivity extends AppCompatActivity {
         SearchView searchView = new SearchView(this);
         searchItem.setActionView(searchView);
         searchView.setQueryHint("Buscar ropa...");
+
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override public boolean onQueryTextSubmit(String query) { return false; }
-            @Override public boolean onQueryTextChange(String newText) { filterListByName(newText); return true; }
+            @Override public boolean onQueryTextSubmit(String query) {
+                productViewModel.setSearch(query);
+                return false;
+            }
+            @Override public boolean onQueryTextChange(String newText) {
+                productViewModel.setSearch(newText); // Búsqueda en tiempo real optimizada
+                return true;
+            }
         });
 
         menu.add(Menu.NONE, 4, Menu.NONE, "💾 Copia de Seguridad");
@@ -301,29 +227,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void toggleTheme() {
-        boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        if (isDark) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            editor.putBoolean("DARK_MODE", false);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            editor.putBoolean("DARK_MODE", true);
-        }
-        editor.apply();
-    }
-
-    private void filterListByName(String text) {
-        List<ProductWithVariants> searchResults = new ArrayList<>();
-        for (ProductWithVariants item : filteredList) {
-            if (item.product.getName().toLowerCase().contains(text.toLowerCase())) {
-                searchResults.add(item);
-            }
-        }
-        adapter.setProductList(searchResults);
-    }
-
+    // --- EXPORTAR CSV (Usamos el método síncrono del ViewModel nuevo) ---
     private void checkPermissionAndExport() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -337,22 +241,68 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void exportToCSV() {
-        try {
-            File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            String fileName = "FerSe_Backup_" + System.currentTimeMillis() + ".csv";
-            File file = new File(folder, fileName);
-            FileWriter writer = new FileWriter(file);
-            writer.append("ID,Producto,Costo,Venta,Stock Total\n");
-            for (ProductWithVariants item : fullProductList) {
-                ProductEntity p = item.product;
-                writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + item.getTotalStock() + "\n");
+        new Thread(() -> {
+            try {
+                // PEDIMOS TODOS LOS DATOS (SIN PAGINAR) EN UN HILO SECUNDARIO
+                List<ProductWithVariants> allProducts = productViewModel.getAllProductsForBackup();
+
+                File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                String fileName = "FerSe_Backup_" + System.currentTimeMillis() + ".csv";
+                File file = new File(folder, fileName);
+                FileWriter writer = new FileWriter(file);
+                writer.append("ID,Producto,Costo,Venta,Stock Total\n");
+
+                if (allProducts != null) {
+                    for (ProductWithVariants item : allProducts) {
+                        ProductEntity p = item.product;
+                        writer.append(p.id + "," + p.name + "," + p.costPrice + "," + p.salePrice + "," + item.getTotalStock() + "\n");
+                    }
+                }
+
+                writer.flush();
+                writer.close();
+
+                runOnUiThread(() -> Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
-            writer.flush();
-            writer.close();
-            Toast.makeText(this, "Backup guardado en Descargas", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }).start();
+    }
+
+    // --- UTILIDADES ---
+    private void calculateTodaySales(List<TransactionEntity> transactions) {
+        double todayTotal = 0;
+        Calendar cal = Calendar.getInstance();
+        int day = cal.get(Calendar.DAY_OF_YEAR);
+        int year = cal.get(Calendar.YEAR);
+
+        if (transactions != null) {
+            for (TransactionEntity t : transactions) {
+                Calendar transCal = Calendar.getInstance();
+                transCal.setTimeInMillis(t.timestamp);
+                if (transCal.get(Calendar.DAY_OF_YEAR) == day && transCal.get(Calendar.YEAR) == year) {
+                    boolean esIngreso = t.type != null && t.type.equals(TransactionType.INCOME);
+                    if (esIngreso && !esInversion(t)) {
+                        todayTotal += t.totalAmount;
+                    }
+                }
+            }
         }
+        tvTodaySales.setText("$ " + String.format("%.0f", todayTotal));
+    }
+
+    private boolean esInversion(TransactionEntity t) {
+        if (t.description == null) return false;
+        String desc = t.description.toLowerCase();
+        return desc.contains("inversión") || desc.contains("inversion") || desc.contains("capital");
+    }
+
+    private void toggleTheme() {
+        boolean isDark = sharedPreferences.getBoolean("DARK_MODE", false);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean("DARK_MODE", !isDark);
+        editor.apply();
+        AppCompatDelegate.setDefaultNightMode(!isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
     }
 
     private void actualizarColoresBotones(int idBotonActivo) {
@@ -362,18 +312,16 @@ public class MainActivity extends AppCompatActivity {
         };
         int colorActivo = android.graphics.Color.parseColor("#546E7A");
         int colorInactivo = android.graphics.Color.parseColor("#CFD8DC");
-        int textoBlanco = android.graphics.Color.WHITE;
-        int textoGris = android.graphics.Color.parseColor("#455A64");
 
         for (int id : ids) {
-            android.widget.Button btn = findViewById(id);
+            Button btn = findViewById(id);
             if (btn != null) {
                 if (id == idBotonActivo) {
                     btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorActivo));
-                    btn.setTextColor(textoBlanco);
+                    btn.setTextColor(android.graphics.Color.WHITE);
                 } else {
                     btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorInactivo));
-                    btn.setTextColor(textoGris);
+                    btn.setTextColor(android.graphics.Color.parseColor("#455A64"));
                 }
             }
         }
