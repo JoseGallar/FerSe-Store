@@ -135,7 +135,9 @@ public class ProductViewModel extends AndroidViewModel {
     public void updateVariant(ProductVariantEntity variant) { mRepository.updateVariant(variant); }
     public void delete(ProductEntity product) { mRepository.delete(product); }
     public void deleteVariant(ProductVariantEntity variant) { mRepository.deleteVariant(variant); }
-    public void insertNewVariant(ProductVariantEntity variant) { mRepository.insertNewVariant(variant); }
+    public void insertNewVariant(ProductVariantEntity variant) {
+        mRepository.insertVariant(variant); // ✅ AHORA SÍ LLAMA AL MÉTODO REAL
+    }
     public LiveData<ProductWithVariants> getProductById(int id) { return mRepository.getProductById(id); }
     public void devolverStock(int variantId, int cantidad) { mRepository.devolverStock(variantId, cantidad); }
 

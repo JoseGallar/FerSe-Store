@@ -10,8 +10,6 @@ import com.fersestore.app.data.entity.ProductVariantEntity;
 import com.fersestore.app.data.entity.ProductWithVariants;
 
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 public class ProductRepository {
 
@@ -22,7 +20,6 @@ public class ProductRepository {
         productDao = db.productDao();
     }
 
-    // --- MÉTODOS DE PAGINACIÓN ---
     public LiveData<List<ProductWithVariants>> getPagedProducts(int limit, int offset) {
         return productDao.getPagedProducts(limit, offset);
     }
@@ -35,12 +32,10 @@ public class ProductRepository {
         return productDao.searchPagedProducts(query, limit, offset);
     }
 
-    // --- CONTEOS PARA CALCULAR PÁGINAS ---
     public LiveData<Integer> getCountAll() { return productDao.getCountAll(); }
     public LiveData<Integer> getCountByCategory(String cat) { return productDao.getCountByCategory(cat); }
     public LiveData<Integer> getCountBySearch(String query) { return productDao.getCountBySearch(query); }
 
-    // --- MÉTODO SÍNCRONO PARA EXPORTAR CSV (En background) ---
     public List<ProductWithVariants> getAllProductsSync() {
         try {
             return AppDatabase.databaseWriteExecutor.submit(() -> productDao.getAllProductsSync()).get();
@@ -50,7 +45,6 @@ public class ProductRepository {
         }
     }
 
-    // --- OPERACIONES DE ESCRITURA (IGUAL QUE ANTES) ---
     public void insertProductWithVariants(ProductEntity product, List<ProductVariantEntity> variants) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             long newId = productDao.insertProduct(product);
@@ -66,7 +60,10 @@ public class ProductRepository {
     }
 
     public void updateVariant(ProductVariantEntity variant) {
-        AppDatabase.databaseWriteExecutor.execute(() -> productDao.updateVariant(variant));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            productDao.updateVariant(variant);
+            productDao.tocarTimbreProducto(variant.productId); // 🔔 TIMBRE
+        });
     }
 
     public void delete(ProductEntity product) {
@@ -74,7 +71,10 @@ public class ProductRepository {
     }
 
     public void deleteVariant(ProductVariantEntity variant) {
-        AppDatabase.databaseWriteExecutor.execute(() -> productDao.deleteVariant(variant));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            productDao.deleteVariant(variant);
+            productDao.tocarTimbreProducto(variant.productId); // 🔔 TIMBRE
+        });
     }
 
     public LiveData<ProductWithVariants> getProductById(int id) {
@@ -82,17 +82,25 @@ public class ProductRepository {
     }
 
     public void insertVariant(ProductVariantEntity variant) {
-        AppDatabase.databaseWriteExecutor.execute(() -> productDao.insertVariant(variant));
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                productDao.insertVariant(variant);
+                productDao.tocarTimbreProducto(variant.productId); // 🔔 TIMBRE
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void devolverStock(int variantId, int cantidad) {
-        AppDatabase.databaseWriteExecutor.execute(() -> productDao.devolverStock(variantId, cantidad));
-    }
-
-    public void insertNewVariant(ProductVariantEntity variant) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            productDao.devolverStock(variantId, cantidad);
+            productDao.tocarTimbrePorVariante(variantId); // 🔔 TIMBRE ESPECIAL
+        });
     }
 
     public LiveData<Double> getTotalStockValue() {
         return productDao.getTotalStockValue();
     }
+
 }
